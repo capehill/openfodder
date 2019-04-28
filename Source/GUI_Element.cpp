@@ -85,8 +85,10 @@ const int16 mGUI_Squad_Split_Icons[] = {
 };
 
 const int16 mGUI_Squad_Active_Icons[] = {
-	149, 150, 151, 152, 153, 154, 155, 156, 157, 158,
-	158
+	149, 150, 151, 
+	152, 153, 154, 
+	155, 156, 157, 
+	158, 158
 };
 
 const int16 mGUI_Squad_Inactive_Icons[] = {
@@ -880,7 +882,7 @@ loc_2FF79:;
 void cFodder::GUI_Sidebar_MapButton_RenderWrapper() {
 
     // Don't display the map button on the final map
-    if (mVersionCurrent->isRetail() && mVersionCurrent->mGame == eGame::CF1) {
+    if (mVersionCurrent->isRetail() && mVersionCurrent->isCannonFodder1()) {
         if ((mGame_Data.mMission_Number == 24 && mGame_Data.mMission_Phase == 6))
             return;
     }
@@ -986,7 +988,7 @@ void cFodder::GUI_Render_Text_Centred(const char* pText, const size_t pPosY) {
 
 void cFodder::GUI_Handle_Button_ShowOverview() {
 
-    if (mMission_Finished)
+    if (mPhase_Finished)
         return;
 
     if (Mouse_Button_Left_Toggled() < 0)
@@ -1050,7 +1052,7 @@ void cFodder::GUI_Sidebar_MapButton_Render() {
     Element->field_0 = &cFodder::GUI_Button_NoAction;
     Element->mX = 0;
 
-    Element->mY = (mWindow->GetScreenSize().mHeight - 0x0B); // PLATFORM_BASED(189, 214);
+    Element->mY = (getCameraHeight() - 0x0B); // PLATFORM_BASED(189, 214);
     Element->mWidth = 0x2F;
     Element->mHeight = 0x0B;
     Element->mMouseInsideFuncPtr = &cFodder::GUI_Handle_Button_ShowOverview;
@@ -1144,23 +1146,14 @@ void cFodder::GUI_Button_Setup_Small(void(cFodder::*pFunction)(void)) {
     mGUI_NextFreeElement = Element;
 }
 
-std::string cFodder::GUI_Select_File(const char* pTitle, const char* pPath, const char* pType, eDataType pData) {
+std::string cFodder::GUI_Select_File(const char* pTitle, const std::vector<sSavedGame>& pSave, const std::vector<std::string> &pMaps) {
     mPhase_Aborted = false;
     mGUI_SaveLoadAction = 0;
 
     mGraphics->SetActiveSpriteSheet(eGFX_RECRUIT);
 
-    auto Files = local_DirectoryList(local_PathGenerate("", pPath, pData), pType);
-    std::vector<sSavedGame> SaveFiles;
-
-    // Filter out save games to match the current data set
-    if (pData == eDataType::eSave) {
-        SaveFiles = Game_Load_Filter(Files);
-        Files.clear();
-    }
-
     mGUI_Select_File_CurrentIndex = 0;
-    mGUI_Select_File_Count = (SaveFiles.size() == 0 ? (int16)Files.size() : (int16)SaveFiles.size());
+    mGUI_Select_File_Count = (pSave.size() == 0 ? (int16)pMaps.size() : (int16)pSave.size());
 
     do {
         size_t YOffset = PLATFORM_BASED(0, 25);
@@ -1183,10 +1176,10 @@ std::string cFodder::GUI_Select_File(const char* pTitle, const char* pPath, cons
         int16 DataC = 0;
 
         // Draw the raw files list?
-        if (!SaveFiles.size()) {
-            auto FileIT = Files.begin() + mGUI_Select_File_CurrentIndex;
+        if (!pSave.size()) {
+            auto FileIT = pMaps.begin() + mGUI_Select_File_CurrentIndex;
 
-            for (; DataC < mGUI_Select_File_ShownItems && FileIT != Files.end(); ++DataC) {
+            for (; DataC < mGUI_Select_File_ShownItems && FileIT != pMaps.end(); ++DataC) {
                 size_t Pos = FileIT->find_first_of(".");
 
                 GUI_Button_Draw(FileIT->substr(0, Pos), 0x3E + (DataC * 0x15), 0xB2, 0xB3);
@@ -1196,9 +1189,9 @@ std::string cFodder::GUI_Select_File(const char* pTitle, const char* pPath, cons
         }
         else {
             // Or the save game list
-            auto FileIT = SaveFiles.begin() + mGUI_Select_File_CurrentIndex;
+            auto FileIT = pSave.begin() + mGUI_Select_File_CurrentIndex;
 
-            for (; DataC < mGUI_Select_File_ShownItems && FileIT != SaveFiles.end(); ++DataC) {
+            for (; DataC < mGUI_Select_File_ShownItems && FileIT != pSave.end(); ++DataC) {
 
                 GUI_Button_Draw(FileIT->mName, 0x3E + (DataC * 0x15), 0xB2, 0xB3);
                 GUI_Button_Setup(&cFodder::GUI_Button_Filename);
@@ -1214,10 +1207,10 @@ std::string cFodder::GUI_Select_File(const char* pTitle, const char* pPath, cons
     if (mGUI_SaveLoadAction == 1)
         return "";
 
-    if (SaveFiles.size())
-        return SaveFiles[mGUI_Select_File_CurrentIndex + mGUI_Select_File_SelectedFileIndex].mFileName;
+    if (pSave.size())
+        return pSave[mGUI_Select_File_CurrentIndex + mGUI_Select_File_SelectedFileIndex].mFileName;
 
-    return Files[mGUI_Select_File_CurrentIndex + mGUI_Select_File_SelectedFileIndex];
+    return pMaps[mGUI_Select_File_CurrentIndex + mGUI_Select_File_SelectedFileIndex];
 }
 
 void cFodder::GUI_Select_File_Loop(bool pShowCursor) {
@@ -1700,15 +1693,12 @@ void cFodder::Sidebar_Render_SquadIcon() {
 
 void cFodder::Sidebar_Clear_ScreenBufferPtr() {
 
-    for (uint16 cx = 0; cx < 0x2000; ++cx)
-        mSidebar_Screen_BufferPtr[cx] = 0;
+	memset(mSidebar_Screen_BufferPtr, 0, mSidebar_Buffer_Size);
 }
 
 void cFodder::Sidebar_Render_To_BackBuffer() {
 
-    for (int16 cx = 0; cx < 0x2000; ++cx) {
-        mSidebar_Back_Buffer[cx] = mSidebar_Screen_Buffer[cx];
-    }
+	memcpy(mSidebar_Back_Buffer, mSidebar_Screen_Buffer, mSidebar_Buffer_Size);
 
     mSidebar_Screen_BufferPtr = mSidebar_Back_Buffer;
 }
@@ -1718,9 +1708,7 @@ void cFodder::Sidebar_Render_To_BackBuffer() {
  */
 void cFodder::Sidebar_Render_To_ScreenBuffer() {
 
-    for (int16 cx = 0; cx < 0x2000; ++cx) {
-        mSidebar_Screen_Buffer[cx] = mSidebar_Back_Buffer[cx];
-    }
+	memcpy(mSidebar_Screen_Buffer, mSidebar_Back_Buffer, mSidebar_Buffer_Size);
 
     mSidebar_Screen_BufferPtr = mSidebar_Screen_Buffer;
 }

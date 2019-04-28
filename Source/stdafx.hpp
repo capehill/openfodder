@@ -37,6 +37,7 @@
 #ifndef EMSCRIPTEN
 #include <SDL_mixer.h>
 #else
+#include <emscripten.h>
 #include <SDL/SDL_mixer.h>
 #endif
 
@@ -50,20 +51,14 @@ enum eDataType {
 	eCampaign,
     eTest,
     eRoot,
+	eScript,
 	eNone,
 };
 
-std::vector<std::string> local_DirectoryList( const std::string& pPath, const std::string& pExtension );
-
-bool				local_FileExists(const std::string& pPath);
-std::string			local_FileMD5( const std::string& pFile, const std::string& pPath );
-tSharedBuffer 		local_FileRead( const std::string& pFile, const std::string& pPath, eDataType pDataType = eData);
-std::string			local_PathGenerate(  const std::string& pFile, const std::string& pPath, eDataType pDataType );
-
+int			start(int argc, char *argv[]);
 void		tool_EndianSwap( uint8* pBuffer, size_t pSize );
 std::string tool_StripLeadingZero( const std::string& pValue );
 uint16		tool_DecimalToBinaryCodedDecimal( uint16 pDecimal );
-
 
 // Read a BE word from the buffer
 inline uint16 readBEWord( const void *buffer ) {
@@ -72,6 +67,7 @@ inline uint16 readBEWord( const void *buffer ) {
 	return uint16((bytes[0] << 8) + bytes[1]);
 }
 
+// Write a LE word in BE
 inline void writeBEWord( const void *buffer, uint16 pValue ) {
 	uint8* bytes = (uint8*) buffer;
 
@@ -79,7 +75,7 @@ inline void writeBEWord( const void *buffer, uint16 pValue ) {
 	bytes[1] = (uint8) (pValue & 0xFF);
 }
 
-
+// Read a LE DWord in BE
 inline uint32 readBEDWord( const void *buffer ) {
 	const uint8* bytes = (const uint8*) buffer;
 
@@ -105,25 +101,35 @@ inline void writeLEWord( const void *buffer, uint16 pValue ) {
 #endif
 
 #include "Debugger.hpp"
+#include "Utils/pseudorand.hpp"
 
 #include "Position.hpp"
 #include "Dimension.hpp"
 #include "Event.hpp"
 
 #include "Surface.hpp"
+#include "Version.hpp"
 #include "Resources.hpp"
+
+#include "Parameters.hpp"
+
 #include "PC/Resource_PC_CD.hpp"
-#include "Amiga/Resource_Amiga_File.hpp"
+//#include "Amiga/Resource_Amiga_File.hpp"
 
 #include "CopyProtection.hpp"
 #include "IntroData.hpp"
-#include "Campaign.hpp"
-#include "Map.hpp"
 #include "Tiles.hpp"
+
+#include "Map/Map.hpp"
+#include "Map/Original.hpp"
+//#include "Map/Random.hpp"
+
+#include "Campaign.hpp"
 #include "FontData.hpp"
 #include "Graphics.hpp"
 #include "Recruits.hpp"
 #include "Versions.hpp"
+#include "ResourceMan.hpp"
 
 #include "Window.hpp"
 #include "Sound.hpp"
@@ -146,10 +152,14 @@ inline void writeLEWord( const void *buffer, uint16 pValue ) {
 #include "About.hpp"
 #include "UnitTesting.hpp"
 
+#include "ScriptingEngine.hpp"
+
 extern std::shared_ptr<cResources> g_Resource;
 extern std::shared_ptr<cWindow>    g_Window;
 extern std::shared_ptr<cFodder>    g_Fodder;
 extern std::shared_ptr<cDebugger>  g_Debugger;
+extern std::shared_ptr<cResourceMan> g_ResourceMan;
+extern std::shared_ptr<cScriptingEngine> g_ScriptingEngine;
 
 extern const char gPathSeperator;
 

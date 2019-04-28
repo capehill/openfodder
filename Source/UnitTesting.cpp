@@ -25,14 +25,14 @@
 
 cUnitTesting::cUnitTesting() {
 
-    g_Fodder->mStartParams.mSinglePhase = true;
-    g_Fodder->mStartParams.mSkipBriefing = true;
-    g_Fodder->mStartParams.mSkipIntro = true;
-    g_Fodder->mStartParams.mSkipService = true;
-    g_Fodder->mStartParams.mSkipRecruit = true;
+    g_Fodder->mStartParams->mSinglePhase = true;
+    g_Fodder->mStartParams->mSkipBriefing = true;
+    g_Fodder->mStartParams->mSkipIntro = true;
+    g_Fodder->mStartParams->mSkipService = true;
+    g_Fodder->mStartParams->mSkipRecruit = true;
 
-    if (!g_Fodder->mStartParams.mDemoRecord)
-        g_Fodder->mStartParams.mDemoPlayback = true;
+    if (!g_Fodder->mStartParams->mDemoRecord)
+        g_Fodder->mStartParams->mDemoPlayback = true;
 }
 
 std::string cUnitTesting::getCurrentTestFileName() {
@@ -65,33 +65,34 @@ void cUnitTesting::EngineSetup() {
 
 void cUnitTesting::setDemoName() {
     // Set demo file name
-    g_Fodder->mParams.mDemoFile = local_PathGenerate(getCurrentTestFileName(), g_Fodder->mParams.mCampaignName, eTest);
-    if (!local_FileExists(g_Fodder->mParams.mDemoFile + ".ofd")) {
+    g_Fodder->mStartParams->mDemoFile = g_ResourceMan->GetTestPath(g_Fodder->mVersionCurrent, g_Fodder->mStartParams->mCampaignName) + "/" + getCurrentTestFileName();
+    if (!g_ResourceMan->FileExists(g_Fodder->mStartParams->mDemoFile + ".ofd")) {
 
-        bool AmigaExists = local_FileExists(g_Fodder->mParams.mDemoFile + "-amiga.ofd");
-        bool PcExists = local_FileExists(g_Fodder->mParams.mDemoFile + "-pc.ofd");
+        bool AmigaExists = g_ResourceMan->FileExists(g_Fodder->mStartParams->mDemoFile + "-amiga.ofd");
+        bool PcExists = g_ResourceMan->FileExists(g_Fodder->mStartParams->mDemoFile + "-pc.ofd");
 
         // If we a PC or Amiga specific test exists, then use it as the name
         if (AmigaExists || PcExists) {
 
             if (g_Fodder->mVersionCurrent->isAmiga()) {
-                g_Fodder->mParams.mDemoFile += "-amiga";
+                g_Fodder->mStartParams->mDemoFile += "-amiga";
             } else {
-                g_Fodder->mParams.mDemoFile += "-pc";
+                g_Fodder->mStartParams->mDemoFile += "-pc";
             }
         }
     }
 
-    g_Fodder->mParams.mDemoFile += ".ofd";
+    g_Fodder->mStartParams->mDemoFile += ".ofd";
 }
 
 bool cUnitTesting::RunTests(const std::string pCampaign) {
     bool Retry = false;
     g_Fodder->Game_Setup();
 
-    if (g_Fodder->mParams.mUnitTesting && g_Fodder->mParams.mDemoPlayback)
-        g_Fodder->mParams.mSleepDelta = 0;
-
+	if (g_Fodder->mStartParams->mUnitTesting && g_Fodder->mStartParams->mDemoPlayback) {
+		g_Fodder->mStartParams->mSleepDelta = 0;
+		g_Fodder->mParams->mSleepDelta = 0;
+	}
 
     while (g_Fodder->mGame_Data.mMission_Current) {
         EngineSetup();
@@ -99,8 +100,8 @@ bool cUnitTesting::RunTests(const std::string pCampaign) {
 
         std::string MissionTitle = getCurrentTestName();
 
-        if (g_Fodder->mStartParams.mDemoRecord && !Retry) {
-            if (local_FileExists(g_Fodder->mParams.mDemoFile)) {
+        if (g_Fodder->mStartParams->mDemoRecord && !Retry) {
+            if (g_ResourceMan->FileExists(g_Fodder->mStartParams->mDemoFile)) {
                 g_Debugger->Notice("Test exists for " + MissionTitle + ", skipping");
                 g_Fodder->mGame_Data.Phase_Next();
                 continue;
@@ -108,12 +109,12 @@ bool cUnitTesting::RunTests(const std::string pCampaign) {
         }
 
         Retry = false;
-        g_Debugger->TestStart(MissionTitle, g_Fodder->mParams.mCampaignName);
+        g_Debugger->TestStart(MissionTitle, g_Fodder->mStartParams->mCampaignName);
 
-        if (g_Fodder->mStartParams.mDemoPlayback) {
-            if (!g_Fodder->mStartParams.mDemoRecord) {
+        if (g_Fodder->mStartParams->mDemoPlayback) {
+            if (!g_Fodder->mStartParams->mDemoRecord) {
                 if (!g_Fodder->Demo_Load()) {
-                    g_Debugger->TestComplete(MissionTitle, g_Fodder->mParams.mCampaignName, "No test found", 0, eTest_Skipped);
+                    g_Debugger->TestComplete(MissionTitle, g_Fodder->mStartParams->mCampaignName, "No test found", 0, eTest_Skipped);
                     g_Fodder->mGame_Data.Phase_Next();
                     continue;
                 }
@@ -123,11 +124,11 @@ bool cUnitTesting::RunTests(const std::string pCampaign) {
         }
 
         // If demo is recording
-        if (g_Fodder->mStartParams.mDemoRecord) {
+        if (g_Fodder->mStartParams->mDemoRecord) {
             // And we have a resume cycle set
-            if (g_Fodder->mStartParams.mDemoRecordResumeCycle) {
+            if (g_Fodder->mStartParams->mDemoRecordResumeCycle) {
                 g_Debugger->Notice("Resuming " + MissionTitle);
-                g_Fodder->mParams.mSleepDelta = 0;
+                g_Fodder->mParams->mSleepDelta = 0;
             }
             else {
                 g_Fodder->mGame_Data.mDemoRecorded.clear();
@@ -136,9 +137,11 @@ bool cUnitTesting::RunTests(const std::string pCampaign) {
         }
 
         // Reset demo status
-        g_Fodder->mParams.mDemoRecord = g_Fodder->mStartParams.mDemoRecord;
-        g_Fodder->mParams.mDemoPlayback = g_Fodder->mStartParams.mDemoPlayback;
-        g_Fodder->mParams.mAppVeyor = g_Fodder->mStartParams.mAppVeyor;
+		//g_Fodder->mParams->mSleepDelta = g_Fodder->mStartParams->mSleepDelta;
+		g_Fodder->mParams->mDemoFile = g_Fodder->mStartParams->mDemoFile;
+        g_Fodder->mParams->mDemoRecord = g_Fodder->mStartParams->mDemoRecord;
+        g_Fodder->mParams->mDemoPlayback = g_Fodder->mStartParams->mDemoPlayback;
+        g_Fodder->mParams->mAppVeyor = g_Fodder->mStartParams->mAppVeyor;
         // Keep game state
         g_Fodder->mGame_Data_Backup = g_Fodder->mGame_Data;
 
@@ -148,7 +151,7 @@ bool cUnitTesting::RunTests(const std::string pCampaign) {
         auto missionDuration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - missionStartTime);
 
         // If recording
-        if (g_Fodder->mStartParams.mDemoRecord) {
+        if (g_Fodder->mStartParams->mDemoRecord) {
             if (g_Fodder->mPhase_Complete) {
                 g_Fodder->mGame_Data.mDemoRecorded.save();
             } else {
@@ -157,17 +160,17 @@ bool cUnitTesting::RunTests(const std::string pCampaign) {
                 // If the phase was aborted (ESC key), don't replay it.. start over
                 if (!g_Fodder->mPhase_EscapeKeyAbort) {
 
-                    // Less than 10 cycles, player can start over
+                    // Less than 80 cycles, player can start over
                     if (g_Fodder->mGame_Data.mDemoRecorded.mTick > 80) {
-                        g_Fodder->mStartParams.mDemoRecordResumeCycle = (g_Fodder->mGame_Data.mDemoRecorded.mTick - 80);
-                        g_Fodder->mStartParams.mDemoPlayback = true;
+                        g_Fodder->mStartParams->mDemoRecordResumeCycle = (g_Fodder->mGame_Data.mDemoRecorded.mTick - 80);
+                        g_Fodder->mStartParams->mDemoPlayback = true;
                         
                         // Delete events occruing after resume cycle
-                        g_Fodder->mGame_Data.mDemoRecorded.removeFrom(g_Fodder->mStartParams.mDemoRecordResumeCycle);
+                        g_Fodder->mGame_Data.mDemoRecorded.removeFrom(g_Fodder->mStartParams->mDemoRecordResumeCycle);
                         g_Fodder->mGame_Data_Backup.mDemoRecorded = g_Fodder->mGame_Data.mDemoRecorded;
                         // Disable video output for speed
-                        g_Fodder->mStartParams.mDisableVideo = true;
-                        g_Fodder->mStartParams.mDisableSound = true;
+                        g_Fodder->mStartParams->mDisableVideo = true;
+                        g_Fodder->mStartParams->mDisableSound = true;
                     }
                 }
                 // Reset game to before start of phase
@@ -177,11 +180,11 @@ bool cUnitTesting::RunTests(const std::string pCampaign) {
         }
 
         if (!g_Fodder->mPhase_Complete) {
-            g_Debugger->TestComplete(MissionTitle, g_Fodder->mParams.mCampaignName, "Phase Failed", (size_t)missionDuration.count(), eTest_Failed);
+            g_Debugger->TestComplete(MissionTitle, g_Fodder->mStartParams->mCampaignName, "Phase Failed", (size_t)missionDuration.count(), eTest_Failed);
             return false;
         }
 
-        g_Debugger->TestComplete(MissionTitle, g_Fodder->mParams.mCampaignName, "Phase Complete", (size_t)missionDuration.count(), eTest_Passed);
+        g_Debugger->TestComplete(MissionTitle, g_Fodder->mStartParams->mCampaignName, "Phase Complete", (size_t)missionDuration.count(), eTest_Passed);
 
         g_Fodder->mGame_Data = g_Fodder->mGame_Data_Backup;
         g_Fodder->mGame_Data.Phase_Next();
@@ -194,10 +197,10 @@ bool cUnitTesting::Start() {
     std::vector<std::string> Campaigns;
 
     // No Campaign Name
-    if (!g_Fodder->mStartParams.mCampaignName.size())
+    if (!g_Fodder->mStartParams->mCampaignName.size())
         Campaigns = g_Fodder->mVersions->GetCampaignNames();
     else
-        Campaigns.push_back(g_Fodder->mParams.mCampaignName);
+        Campaigns.push_back(g_Fodder->mStartParams->mCampaignName);
 
     bool TotalResult = true;
     for (auto& CampaignName : Campaigns) {
@@ -206,8 +209,8 @@ bool cUnitTesting::Start() {
         if (CampaignName == "Random Map" || CampaignName == "Single Map")
             continue;
 
-        g_Fodder->mParams = g_Fodder->mStartParams;
-        g_Fodder->mParams.mCampaignName = CampaignName;
+        *g_Fodder->mParams = *g_Fodder->mStartParams;
+        g_Fodder->mStartParams->mCampaignName = CampaignName;
 
         g_Debugger->TestStart(CampaignName, "Campaign");
 
@@ -219,9 +222,9 @@ bool cUnitTesting::Start() {
         }
 
         // FIXME: Create test folder
-        if (!local_FileExists(local_PathGenerate("", CampaignName, eTest)) && g_Fodder->mStartParams.mDemoRecord) {
+        if (!g_ResourceMan->FileExists(g_ResourceMan->GetTestPath(g_Fodder->mVersionCurrent, "")) && g_Fodder->mStartParams->mDemoRecord) {
 
-            std::string Command = "mkdir \"" + local_PathGenerate("", CampaignName, eTest) + "\"";
+            std::string Command = "mkdir \"" + g_ResourceMan->GetTestPath(g_Fodder->mVersionCurrent, "") + "\"";
             system(Command.c_str());
         }
 

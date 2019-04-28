@@ -21,35 +21,33 @@
  */
 
 #include "stdafx.hpp"
+#include "Amiga/dernc.hpp"
 
-cResources::cResources( std::string pDataPath ) {
+cResources::cResources( ) {
 
-	mDataPath = pDataPath;
 }
 
 tSharedBuffer cResources::fileGet( std::string pFilename ) {
-    // This is really hacky
+	auto File = g_ResourceMan->FileRead(g_Fodder->mVersionCurrent->getDataFilePath(pFilename));
 
-    // First look for lower case, without a path
-	std::transform( pFilename.begin(), pFilename.end(), pFilename.begin(), ::tolower );
-	auto File = local_FileRead( pFilename, "" );
-	if (File->size())
-		return File;
+	if (File->size()) {
 
-    // Then check in the data path
-	File = local_FileRead( pFilename, mDataPath.c_str() );
-	if (File->size())
-		return File;
-
-	// Then check for upper case
-	std::transform( pFilename.begin(), pFilename.end(), pFilename.begin(), ::toupper );
-	File = local_FileRead( pFilename, "" );
-	if (File->size())
-		return File;
-
-    // Then check for upper case in the data path
-	File = local_FileRead( pFilename, mDataPath.c_str() );
+		return fileDeRNC(File);
+	}
 	return File;
+}
+
+tSharedBuffer cResources::fileDeRNC(tSharedBuffer pBuffer) {
+	uint32 Header = readBEDWord(pBuffer->data());
+	if (Header != 'RNC\01')
+		return pBuffer;
+
+	uint32 Size = readBEDWord(pBuffer->data() + 4);
+
+	auto Unpacked = std::make_shared<std::vector<uint8>>();
+	Unpacked->resize(Size);
+	rnc_unpack(pBuffer->data(), Unpacked->data());
+	return Unpacked;
 }
 
 size_t cResources::fileLoadTo( const std::string& pFilename, uint8* pTarget ) {

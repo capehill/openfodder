@@ -22,23 +22,6 @@
 
 class cFodder;
 
-enum eGFX_Types {
-	eGFX_IN_GAME = 0,
-	eGFX_IN_GAME2 = 1,
-	eGFX_FONT = 2,
-	eGFX_HILL = 3,
-	eGFX_RECRUIT = 4,
-	eGFX_BRIEFING = 5,
-	eGFX_SERVICE = 6,
-
-	eGFX_RANKFONT = 7,
-	eGFX_PSTUFF = 8,
-
-	eGFX_BRIEFING_AMIGA_1 = 9,
-	eGFX_BRIEFING_AMIGA_2 = 10,
-	eGFX_BRIEFING_AMIGA_3 = 11
-};
-
 struct sILBM_BMHD {
 	uint16	mWidth, mHeight;
 	uint16	mX, mY;
@@ -172,7 +155,7 @@ public:
 
 	virtual sImage		Decode_Image(const std::string& pFilename, const size_t pCount = 0, const size_t pPaletteOffset = 0, const size_t pStartIndex = 0) = 0;
 
-	virtual void		Load_And_Draw_Image( const std::string &pFilename, unsigned int pColors, unsigned int pBackColor = 0) = 0;
+	virtual void		Load_And_Draw_Image( const std::string &pFilename, unsigned int pColors, size_t pBackColor = 0) = 0;
 
 	virtual void		Map_Tile_Draw(cSurface *pTarget, uint16 pTile, uint16 pX, uint16 pY, uint16 pOffset) = 0;
 	virtual void		MapTiles_Draw() = 0;
@@ -184,8 +167,8 @@ public:
 	virtual void		PaletteSet(cSurface *pTarget = 0) = 0;
 	virtual void		PaletteLoad( const uint8  *pBuffer, uint32 pColors, uint32 pColorID = 0 ) = 0;
 
-	virtual void		Video_Draw_16() = 0;
-	virtual void		Video_Draw_8(cSurface *pTarget = 0) = 0;
+	virtual void		Video_Draw_16(const uint8* RowPallete = 0) = 0;
+	virtual void		Video_Draw_8(cSurface *pTarget = 0, const uint8* RowPallete = 0) = 0;
 
 	virtual void		SetActiveSpriteSheet( eGFX_Types pSpriteType ) = 0;
 	virtual void		SetImage( cSurface* pImage );
@@ -197,8 +180,8 @@ public:
 	virtual void		Sidebar_Copy_ScreenBuffer( uint16 pRow, int16 pRows, int16 pCopyToScreen, uint32*& pBuffer) = 0;
 	virtual void		Recruit_Sprite_Draw( int16 pColumns, int16 pRows, int16 pData8, int16 pData10, int16 pData14, int16 pDataC, uint8* pGraphics ) = 0;
 
-	virtual void		Mission_Intro_Play( const bool pShowHelicopter ) = 0;
-	virtual void		Mission_Intro_Load_Resources() = 0;
+	virtual void		Mission_Intro_Play( const bool pShowHelicopter, const eTileTypes pTileset) = 0;
+	virtual void		Mission_Intro_Load_Resources(const eTileTypes pTileset) = 0;
 	virtual void		Mission_Intro_DrawHelicopter( uint16 pID ) = 0;
 
 	virtual void		Recruit_Draw_Hill() = 0;

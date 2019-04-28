@@ -16,15 +16,18 @@
     <Filter Include="Source\Structures">
       <UniqueIdentifier>{5c64d2e5-eaa0-44f1-ad36-b2c67625baf6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Map">
+      <UniqueIdentifier>{53095f20-80bc-4b7b-a896-cfc3e7f0b34e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Utils\dukglue">
+      <UniqueIdentifier>{bc8f0a7c-11c4-4c1c-bc1c-edd49e424cdc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\stdafx.hpp">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Window.hpp">
-      <Filter>Source</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\Singleton.hpp">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Fodder.hpp">
@@ -64,9 +67,6 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Recruits.hpp">
-      <Filter>Source</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\md5.hpp">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\PC\Resource_PC_CD.hpp">
@@ -129,9 +129,6 @@
     <ClInclude Include="..\..\Source\SpriteSheet.hpp">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Map.hpp">
-      <Filter>Source</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\Campaign.hpp">
       <Filter>Source</Filter>
     </ClInclude>
@@ -144,7 +141,6 @@
     <ClInclude Include="..\..\Source\GameData.hpp">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h" />
     <ClInclude Include="..\..\Source\Utils\cxxopts.hpp">
       <Filter>Source\Utils</Filter>
     </ClInclude>
@@ -163,8 +159,105 @@
     <ClInclude Include="..\..\Source\About.hpp">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\gitver.h">
+    <ClInclude Include="..\resource.h" />
+    <ClInclude Include="..\..\Source\Utils\md5.hpp">
+      <Filter>Source\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\ResourceMan.hpp">
       <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Version.hpp">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\ini.hpp">
+      <Filter>Source\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\SimplexNoise.hpp">
+      <Filter>Source\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\pseudorand.hpp">
+      <Filter>Source\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Parameters.hpp">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Map\Map.hpp">
+      <Filter>Source\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Map\Original.hpp">
+      <Filter>Source\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Map\Random.hpp">
+      <Filter>Source\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\duk_config.h">
+      <Filter>Source\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\duktape.h">
+      <Filter>Source\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\detail_class_proto.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\detail_constructor.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\detail_function.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\detail_method.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\detail_primitive_types.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\detail_refs.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\detail_stack.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\detail_traits.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\detail_typeinfo.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\detail_types.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\dukexception.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\dukglue.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\dukvalue.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\public_util.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\register_class.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\register_function.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\dukglue\register_property.h">
+      <Filter>Source\Utils\dukglue</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\ScriptingEngine.hpp">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\SimplexIslands.hpp">
+      <Filter>Source\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\micropather.h">
+      <Filter>Source\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Utils\duk_trans_socket.h">
+      <Filter>Source\Utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -196,9 +289,6 @@
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Recruits.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\md5.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Versions.cpp">
@@ -276,14 +366,59 @@
     <ClCompile Include="..\..\Source\About.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
+    <ClCompile Include="..\..\Source\Utils\md5.cpp">
+      <Filter>Source\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\ResourceMan.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Utils\SimplexNoise.cpp">
+      <Filter>Source\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Parameters.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Start.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Start_Emscripten.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Map\Original.cpp">
+      <Filter>Source\Map</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Map\Map.cpp">
+      <Filter>Source\Map</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Map\Random.cpp">
+      <Filter>Source\Map</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\MapData.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Utils\duktape.cpp">
+      <Filter>Source\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\ScriptingEngine.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Utils\SimplexIslands.cpp">
+      <Filter>Source\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Utils\micropather.cpp">
+      <Filter>Source\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\Utils\duk_trans_socket_windows.cpp">
+      <Filter>Source\Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\openfodder.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="OpenFodder.rc" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\OpenFodder.rc" />
   </ItemGroup>
 </Project>

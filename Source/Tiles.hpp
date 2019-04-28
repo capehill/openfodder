@@ -20,32 +20,22 @@
 *
 */
 
-enum eTileTypes {
-	eTileTypes_Jungle	= 0,
-	eTileTypes_Desert	= 1,
-	eTileTypes_Ice		= 2,
-	eTileTypes_Moors	= 3,
-	eTileTypes_Int		= 4,
-	eTileTypes_Hid		= 5,
-	eTileTypes_AFX		= 6,	// Amiga Format Christmas Special
-};
-
-enum eTerrainType {
-	eTerrainType_Land			= 0,
-	eTerrainType_Rocky			= 1,
-	eTerrainType_Rocky2			= 2,
-	eTerrainType_BounceOff		= 3,
-	eTerrainType_QuickSand		= 4,
-	eTerrainType_WaterEdge		= 5,
-	eTerrainType_Water			= 6,
-	eTerrainType_Snow			= 7,
-	eTerrainType_QuickSandEdge	= 8,
-	eTerrainType_Drop			= 9,
-	eTerrainType_Drop2			= 0x0A,
-	eTerrainType_Sink			= 0x0B,
-	eTerrainType_C				= 0x0C,
-	eTerrainType_D				= 0x0D,
-	eTerrainType_Jump			= 0x0E
+enum eTerrainFeature {
+	eTerrainFeature_Land = 0,
+	eTerrainFeature_Rocky = 1,
+	eTerrainFeature_Rocky2 = 2,
+	eTerrainFeature_Block = 3,
+	eTerrainFeature_QuickSand = 4,
+	eTerrainFeature_WaterEdge = 5,
+	eTerrainFeature_Water = 6,
+	eTerrainFeature_Snow = 7,				// Reduce unit speed
+	eTerrainFeature_QuickSandEdge = 8,
+	eTerrainFeature_Drop = 9,
+	eTerrainFeature_Drop2 = 0x0A,
+	eTerrainFeature_Sink = 0x0B,
+	eTerrainFeature_C = 0x0C,
+	eTerrainFeature_D = 0x0D,
+	eTerrainFeature_Jump = 0x0E
 };
 
 struct sTileType {
@@ -53,7 +43,6 @@ struct sTileType {
 	std::string mName;
 	std::string mFullName;
 };
-
 
 struct sStructureTile {
 	int16 mX;
@@ -118,3 +107,6 @@ extern const int16 mTiles_Indestructible_Internal[];
 extern const int16* mTiles_Indestructible[];
 
 extern const std::vector<sTileType> mTileTypes;
+
+extern const int16 TILE_WIDTH_PIXELS;
+extern const int16 TILE_HEIGHT_PIXELS;

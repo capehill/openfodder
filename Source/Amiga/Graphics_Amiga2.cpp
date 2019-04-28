@@ -41,15 +41,15 @@ void cGraphics_Amiga2::Map_Load_Resources() {
     SetActiveSpriteSheet(eGFX_IN_GAME);
 }
 
-void cGraphics_Amiga2::Mission_Intro_Load_Resources() {
+void cGraphics_Amiga2::Mission_Intro_Load_Resources(const eTileTypes pTileset) {
 
     // Briefing images
-    std::string JunData1 = mTileTypes[mFodder->mMap_TileSet].mName + "PLAY";
-    std::string JunData2 = mTileTypes[mFodder->mMap_TileSet].mName + "sky.pl8";
-    std::string JunData3 = mTileTypes[mFodder->mMap_TileSet].mName + "mid.pl8";
-    std::string JunData4 = mTileTypes[mFodder->mMap_TileSet].mName + "fgnd.pl8";
-    std::string JunData5 = mTileTypes[mFodder->mMap_TileSet].mName + "fgn2.pl8";
-    std::string JunData6 = mTileTypes[mFodder->mMap_TileSet].mName + "heli.pal";
+    std::string JunData1 = mTileTypes[pTileset].mName + "PLAY";
+    std::string JunData2 = mTileTypes[pTileset].mName + "sky.pl8";
+    std::string JunData3 = mTileTypes[pTileset].mName + "mid.pl8";
+    std::string JunData4 = mTileTypes[pTileset].mName + "fgnd.pl8";
+    std::string JunData5 = mTileTypes[pTileset].mName + "fgn2.pl8";
+    std::string JunData6 = mTileTypes[pTileset].mName + "heli.pal";
 
     // Load the intro images
     mImageMissionIntro = GetImage(JunData1, 0);
@@ -172,7 +172,7 @@ void cGraphics_Amiga2::Load_Service_Data() {
     mSpriteSheet_RankFont = GetImage("rankfont", 0);
 }
 
-void cGraphics_Amiga2::Load_And_Draw_Image(const std::string &pFilename, unsigned int pColors, unsigned int pBackColor) {
+void cGraphics_Amiga2::Load_And_Draw_Image(const std::string &pFilename, unsigned int pColors, size_t pBackColor) {
     std::string	Filename = pFilename;
 
     // Try it as an IFF

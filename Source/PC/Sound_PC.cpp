@@ -132,17 +132,18 @@ void cSound_PC::Sound_Play( int16 pTileset, int16 pSoundEffect, int16 pVolume ) 
 	mMixerChunks.push_back( Playing );
 }
 
-void cSound_PC::Music_PlayFile( const char* pFilename ) {
+void cSound_PC::Music_PlayFile( const std::string& pFilename ) {
 
 	if (mSound == false)
 		return;
 
-    std::string Filename = local_PathGenerate(pFilename, "WAV", eData) + ".wav";
-
 	Mix_FreeMusic( mMusicPlaying );
 	SDL_Delay( 100 );
+	mMusicPlaying = 0;
 
-	mMusicPlaying = Mix_LoadMUS( Filename.c_str() );
+	if(g_ResourceMan->FileExists(pFilename.c_str()))
+		mMusicPlaying = Mix_LoadMUS(pFilename.c_str());
+
 	Mix_VolumeMusic( 0x70 );
 
 	if (mMusicPlaying)
@@ -159,7 +160,7 @@ void cSound_PC::Music_Stop() {
 
 void cSound_PC::Music_Play( int16 pTrack ) {
 	
-	const char* Tracks[] = {
+	static std::string Tracks[] = {
 		"rjp.JON(1)",
 		"rjp.JON(2)",
 		"rjp.JON(3)",
@@ -220,6 +221,11 @@ void cSound_PC::Music_Play( int16 pTrack ) {
 		"",
 	};
 
-	Music_PlayFile( Tracks[pTrack] );
+	if (g_Fodder->mVersionCurrent->isPCFormat() && pTrack == 16)
+		Music_PlayFile(g_ResourceMan->GetFilePath(g_Fodder->mVersionCurrent, "CANNON2.DAT"));
+	else {
+		Music_PlayFile(g_ResourceMan->GetWavPath(Tracks[pTrack] + ".wav"));
+	}
+
 
 }

@@ -82,7 +82,7 @@ const uint8 cResource_PC_CD::byte_29A21[0x101] = {
    58,  59,  60,  61,  62,  63, 0
 };
 
-cResource_PC_CD::cResource_PC_CD( const std::string& pDataPath, const std::string& pDataFile ) : cResources(pDataPath) {
+cResource_PC_CD::cResource_PC_CD( const std::string& pDataFile ) : cResources() {
 
 	memset( word_26DBE, 0, 0x273 * 2 );
 	memset( word_272A4, 0, 0x13A * 2 );
@@ -96,7 +96,7 @@ cResource_PC_CD::cResource_PC_CD( const std::string& pDataPath, const std::strin
 	word_26DAA = word_26DB4 = saveSI = saveBP = 0;
 
     
-	mData = local_FileRead(pDataFile, pDataPath );
+	mData = g_ResourceMan->FileRead(g_Fodder->mVersionCurrent->getDataFilePath(pDataFile));
 	if (!mData) {
 		std::cout << pDataFile << " not found\n";
 		exit( 1 );
@@ -147,11 +147,12 @@ void cResource_PC_CD::ExtractFiles() {
 	for (auto File : mFiles) {
 
 		auto FileData = fileGet( File.mName );
+		/*
 		std::string Filename = local_PathGenerate( File.mName, "ExtractedData", eDataType::eData);
 
 		std::ofstream outfile( Filename, std::ofstream::binary );
 		outfile.write( (const char*)FileData->data(), FileData->size() );
-		outfile.close();
+		outfile.close();*/
 	}
 }
 
@@ -266,6 +267,7 @@ tSharedBuffer cResource_PC_CD::file_Get( cResource_File *pFile, bool pDecode ) {
 tSharedBuffer cResource_PC_CD::fileGet( std::string pFilename ) {
 	std::vector< cResource_File >::iterator		fileIT;
 
+	// Look for local overrides
 	auto File = cResources::fileGet( pFilename );
 	if (File->size())
 		return File;
@@ -280,7 +282,12 @@ tSharedBuffer cResource_PC_CD::fileGet( std::string pFilename ) {
 		}
 	}
 
-	std::cout << "File " << pFilename << " Not Found!\n";
+	g_Debugger->Error("File " + pFilename + " Not Found in DAT");
+	std::cout << "Total files inside DAT: " << mFiles.size() << "\n";
+
+	for (fileIT = mFiles.begin(); fileIT != mFiles.end(); ++fileIT)
+		g_Debugger->Error(fileIT->mName + "\n");
+
 	exit( 1 );
 	return File;
 }

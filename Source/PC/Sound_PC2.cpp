@@ -136,7 +136,7 @@ void cSound_PC2::Sound_Voc_Load() {
         SDL_BuildAudioCVT(&cvt, AUDIO_U8, 1, 8000, AUDIO_U8, 2, 22050);
         SDL_assert(cvt.needed);
 
-        cvt.len = file->size();
+        cvt.len = (int) file->size();
         cvt.buf = (Uint8 *)SDL_malloc(cvt.len * cvt.len_mult);
 
         memcpy(cvt.buf, file->data(), file->size());
@@ -170,7 +170,7 @@ bool cSound_PC2::devicePrepare() {
 
 void cSound_PC2::MixerChannelFinished( int32 pChannel ) {
 
-    auto end = std::remove_if(mMixerChunks.begin(), mMixerChunks.end(), [pChannel](auto& a) {
+    auto end = std::remove_if(mMixerChunks.begin(), mMixerChunks.end(), [pChannel](sChunkPlaying& a) {
         return a.mChannel == pChannel;
     });
 
@@ -202,8 +202,7 @@ void cSound_PC2::Music_PlayFile( const char* pFilename ) {
 	if (mSound == false)
 		return;
 
-    std::string Filename = local_PathGenerate(pFilename, g_Fodder->mVersionCurrent->mDataPath, eData) + ".AMF";
-
+    std::string Filename = g_Fodder->mVersionCurrent->getDataFilePath(std::string(pFilename) + ".AMF");
     Mix_FreeMusic(mMusicPlaying);
     SDL_Delay(100);
 
@@ -251,7 +250,7 @@ void cSound_PC2::Music_Play( int16 pTrack ) {
             filename = "GAMEOVER";
             break;
 
-        case 16:
+        case 20:
             filename = "TITLE";
             break;
 

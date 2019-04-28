@@ -281,7 +281,7 @@ void cGraphics_PC::MapTiles_Draw() {
     uint8* CurrentMapPtr = mFodder->mMap->data() + mFodder->mMapTile_Ptr;
 
     // Y
-    for (uint16 cx = 0; cx < 0x10; ++cx) {
+    for (uint16 cx = 0; cx <= g_Fodder->getWindowRows() + 1; ++cx) {
         uint8* MapPtr = CurrentMapPtr;
         uint8* TargetRow = Target;
 
@@ -291,7 +291,7 @@ void cGraphics_PC::MapTiles_Draw() {
             StartY = mFodder->mMapTile_RowOffset;
 
         // X
-        for (uint16 cx2 = 0; cx2 < 0x16; ++cx2) {
+        for (uint16 cx2 = 0; cx2 <= g_Fodder->getWindowColumns() + 1; ++cx2) {
             uint8* TargetTmp = TargetRow;
 
             // Verify we are inside the actual map data
@@ -327,7 +327,7 @@ void cGraphics_PC::MapTiles_Draw() {
         }
 
         Target += mSurface->GetWidth() * (16 - StartY);
-        CurrentMapPtr += mFodder->mMapWidth << 1;
+        CurrentMapPtr += mFodder->mMapLoaded->getWidth() << 1;
     }
     mSurface->Save();
 }
@@ -380,7 +380,7 @@ void cGraphics_PC::Map_Load_Resources() {
 	SetActiveSpriteSheet( eGFX_IN_GAME );
 }
 
-void cGraphics_PC::Video_Draw_8(cSurface *pTarget) {
+void cGraphics_PC::Video_Draw_8(cSurface *pTarget, const uint8* RowPallete) {
 	if (!pTarget)
 		pTarget = mSurface;
 
@@ -390,24 +390,29 @@ void cGraphics_PC::Video_Draw_8(cSurface *pTarget) {
 	di += pTarget->GetWidth() * mFodder->mVideo_Draw_PosY;
 	di += mFodder->mVideo_Draw_PosX;
 
-	mFodder->word_42066 = di;
-
 	mFodder->mVideo_Draw_Columns >>= 1;
 	mFodder->mDraw_Source_SkipPixelsPerRow = 160 - mFodder->mVideo_Draw_Columns;
 	mFodder->mDraw_Dest_SkipPixelsPerRow = (uint16)(pTarget->GetWidth() - (mFodder->mVideo_Draw_Columns * 2));
 
-	for (int16 dx = mFodder->mVideo_Draw_Rows; dx > 0; --dx) {
+	for (int16 dx = 0; dx < mFodder->mVideo_Draw_Rows; ++dx) {
+		uint8 Palette = mFodder->mVideo_Draw_PaletteIndex;
+		if (RowPallete) {
+			int16 bx = mFodder->mVideo_Draw_PosY + dx;
+
+			Palette = RowPallete[bx];
+		}
 
 		for (int16 cx = mFodder->mVideo_Draw_Columns; cx > 0; --cx) {
 			uint8 ah = *si;
 
+
 			uint8 al = ah >> 4;
 			if (al)
-				*di = al | mFodder->mVideo_Draw_PaletteIndex;
+				*di = al | Palette;
 
 			al = ah & 0x0F;
 			if (al)
-				*(di + 1) = al | mFodder->mVideo_Draw_PaletteIndex;
+				*(di + 1) = al | Palette;
 
 			si++;
 			di+=2;
@@ -418,17 +423,15 @@ void cGraphics_PC::Video_Draw_8(cSurface *pTarget) {
 	}
 }
 
-void cGraphics_PC::Video_Draw_16() {
+void cGraphics_PC::Video_Draw_16(const uint8* RowPallete) {
 	uint8*	di = mSurface->GetSurfaceBuffer();
 	uint8* 	si = mFodder->mVideo_Draw_FrameDataPtr;
 
-	di += 352 * mFodder->mVideo_Draw_PosY;
+	di += mSurface->GetWidth() * mFodder->mVideo_Draw_PosY;
 	di += mFodder->mVideo_Draw_PosX;
 
-	mFodder->word_42066 = di;
-
 	mFodder->mDraw_Source_SkipPixelsPerRow = mFodder->mVideo_Draw_ColumnsMax - mFodder->mVideo_Draw_Columns;
-	mFodder->mDraw_Dest_SkipPixelsPerRow = 352 - mFodder->mVideo_Draw_Columns;
+	mFodder->mDraw_Dest_SkipPixelsPerRow = mSurface->GetWidth() - mFodder->mVideo_Draw_Columns;
 
 	for (int16 dx = mFodder->mVideo_Draw_Rows; dx > 0; --dx) {
 
@@ -453,14 +456,14 @@ void cGraphics_PC::Sidebar_Copy_To_Surface( int16 pStartY ) {
 
 	Buffer += (16 * mSurface->GetWidth()) +     16;
 
-	for (unsigned int Y = 0; Y < 250; ++Y) {
+	for (unsigned int Y = 17 + pStartY; Y < mSurface->GetHeight(); ++Y) {
 
 		for (unsigned int X = 0; X < 0x30; ++X) {
 
 			Buffer[X] = *si++;
 		}
 			
-		Buffer += 352;
+		Buffer += mSurface->GetWidth();
 	}
 }
 
@@ -589,14 +592,14 @@ void cGraphics_PC::Recruit_Draw_HomeAway( ) {
 	SetActiveSpriteSheet(eGFX_HILL);
 }
 
-void cGraphics_PC::Mission_Intro_Load_Resources() {
+void cGraphics_PC::Mission_Intro_Load_Resources(const eTileTypes pTileset) {
 
 	// Briefing images
-	std::string JunData1 = mTileTypes[mFodder->mMap_TileSet].mName + "p1.dat";
-	std::string JunData2 = mTileTypes[mFodder->mMap_TileSet].mName + "p2.dat";
-	std::string JunData3 = mTileTypes[mFodder->mMap_TileSet].mName + "p3.dat";
-	std::string JunData4 = mTileTypes[mFodder->mMap_TileSet].mName + "p4.dat";
-	std::string JunData5 = mTileTypes[mFodder->mMap_TileSet].mName + "p5.dat";
+	std::string JunData1 = mTileTypes[pTileset].mName + "p1.dat";
+	std::string JunData2 = mTileTypes[pTileset].mName + "p2.dat";
+	std::string JunData3 = mTileTypes[pTileset].mName + "p3.dat";
+	std::string JunData4 = mTileTypes[pTileset].mName + "p4.dat";
+	std::string JunData5 = mTileTypes[pTileset].mName + "p5.dat";
 
 	mImageMissionIntro.mData = g_Resource->fileGet(JunData1);
 	mMission_Intro_Gfx_Clouds1 = g_Resource->fileGet(JunData2);
@@ -608,7 +611,8 @@ void cGraphics_PC::Mission_Intro_Load_Resources() {
 
 	// Copy the palette for the current map tileset, in from paraheli to the briefing intro images
 	uint8* si = mBriefing_ParaHeli->data() + 0xF00;
-	si += 0x30 * mFodder->mMap_TileSet;
+	si += 0x30 * pTileset;
+
 	std::memcpy( (mImageMissionIntro.mData->data() + mImageMissionIntro.mData->size()) - 0x60, si, 0x30 );
 
 	// Copy the palette from mImagePStuff 
@@ -683,7 +687,7 @@ void cGraphics_PC::Recruit_Sprite_Draw( int16 pColumns, int16 pRows,
 
 }
 
-void cGraphics_PC::Load_And_Draw_Image( const std::string &pFilename, unsigned int pColors, unsigned int pBackColor) {
+void cGraphics_PC::Load_And_Draw_Image( const std::string &pFilename, unsigned int pColors, size_t pBackColor) {
 	std::string Filename = pFilename;
 
 	if (Filename.find('.') == std::string::npos )
@@ -714,10 +718,9 @@ void cGraphics_PC::Load_And_Draw_Image( const std::string &pFilename, unsigned i
 		PaletteLoad( fileBuffer->data() + (fileBuffer->size() - (0x100 * 3)), pColors );
 }
 
-void cGraphics_PC::Mission_Intro_DrawHelicopter( uint16 pID ) {
+void cGraphics_PC::Mission_Intro_DrawHelicopter( uint16 ) {
 
 }
-
 
 bool cGraphics_PC::Sprite_OnScreen_Check() {
 	int16 ax;
@@ -771,12 +774,13 @@ bool cGraphics_PC::Sprite_OnScreen_Check() {
 
 	ax = mFodder->mVideo_Draw_PosX + mFodder->mVideo_Draw_Columns;
 	--ax;
+	int16 maxWindowX = mFodder->getWindowWidth() + 31; // 351
 
-	if (ax > 351) {
-		if (mFodder->mVideo_Draw_PosX > 351)
+	if (ax > maxWindowX) {
+		if (mFodder->mVideo_Draw_PosX > maxWindowX)
 			return false;
 
-		ax -= 351;
+		ax -= maxWindowX;
 		--ax;
 
 		do {
@@ -795,15 +799,15 @@ bool cGraphics_PC::Sprite_OnScreen_Check() {
 	return true;
 }
 
-void cGraphics_PC::Mission_Intro_Play(const bool pShowHelicopter) {
+void cGraphics_PC::Mission_Intro_Play(const bool pShowHelicopter, const eTileTypes pTileset) {
 
-	switch (mFodder->mMap_TileSet) {
+	switch (pTileset) {
 	case eTileTypes_Jungle:
 	case eTileTypes_Desert:
     case eTileTypes_Ice:
 	case eTileTypes_Moors:
 	case eTileTypes_Int:
-        Mission_Intro(BackgroundPositions[mFodder->mMap_TileSet], pShowHelicopter);
+        Mission_Intro(BackgroundPositions[pTileset], pShowHelicopter);
 
     default:
         return;
@@ -820,25 +824,26 @@ void cGraphics_PC::Mission_Intro_Render_1(tSharedBuffer pDs, int16 pCx) {
 
 
 void cGraphics_PC::Mission_Intro_Render_2(tSharedBuffer pSource, int16 pCx) {
+
 	uint8* pDs = pSource->data();
 
 	int16 ax = pCx >> 2;
 	int16 dx = ax;
 
-	ax -= 0x50;
-	word_4285F = -ax;
+	ax -= 80;
+	int16 word_4285F = -ax;
 
-	uint8* word_4285D = mSurface->GetSurfaceBuffer() + word_4285B + (dx * 4);
+	uint8* destPtr = mSurface->GetSurfaceBuffer() + mMission_Intro_DrawY + (dx * 4);
 
 	++dx;
 
-	uint8* di = word_4285D;
+	uint8* di = destPtr;
 
 	// Loop the 4 planes
 	for (uint8 Plane = 0; Plane < 4; ++Plane) {
-		di = word_4285D + Plane;
+		di = destPtr + Plane;
 
-		for (int16 bx = word_42859; bx > 0; --bx) {
+		for (int16 bx = mMission_Intro_DrawX; bx > 0; --bx) {
 			int16 cx;
 			for (cx = word_4285F; cx > 0; --cx) {
                 if (pDs >= pSource->data() + pSource->size())
@@ -852,7 +857,9 @@ void cGraphics_PC::Mission_Intro_Render_2(tSharedBuffer pSource, int16 pCx) {
 				di += 4;
 			}
 
-			di -= (0x51 * 4);
+			// 28 difference
+
+			di -= mSurface->GetWidth() - 12 - 16; // (81 * 4) // 324;
 			--pDs;
 			for (cx = dx; cx > 0; --cx) {
                 if (pDs >= pSource->data() + pSource->size())
@@ -866,30 +873,31 @@ void cGraphics_PC::Mission_Intro_Render_2(tSharedBuffer pSource, int16 pCx) {
 				di += 4;
 			}
 
-			di += (0x58 * 4);
+			di += mSurface->GetWidth(); // (88 * 4) // 352;
 		}
 	}
 }
 
 void cGraphics_PC::sub_15B98(tSharedBuffer pDsSi, int16 pCx) {
+
     uint8* Ds = pDsSi->data();
 
 	int16 ax = pCx >> 2;
 	int16 dx = ax;
 
-	ax -= 0x50;
-	word_4285F = -ax;
+	ax -= 80;
+	int16 word_4285F = -ax;
 
-	uint8* word_4285D = mSurface->GetSurfaceBuffer() + word_4285B + (dx * 4);
+	uint8* destPtr = mSurface->GetSurfaceBuffer() + mMission_Intro_DrawY + (dx * 4);
 
 	++dx;
 
-	uint8* di = word_4285D;
+	uint8* di = destPtr;
 
 	for (uint8 Plane = 0; Plane < 4; ++Plane) {
-		di = word_4285D + Plane;
+		di = destPtr + Plane;
 
-		for (int16 bx = word_42859; bx > 0; --bx) {
+		for (int16 bx = mMission_Intro_DrawX; bx > 0; --bx) {
 			int16 cx = word_4285F;
 
 			if (cx & 1) {
@@ -909,7 +917,7 @@ void cGraphics_PC::sub_15B98(tSharedBuffer pDsSi, int16 pCx) {
 			}
 
 			cx = dx;
-			di -= 0x51 * 4;
+			di -= mSurface->GetWidth() - 12 - 16;
 			--Ds;
 			if (cx & 1) {
 				*di = *Ds++;
@@ -926,7 +934,7 @@ void cGraphics_PC::sub_15B98(tSharedBuffer pDsSi, int16 pCx) {
 
 				--cx;
 			}
-			di += 0x58 * 4;
+			di += mSurface->GetWidth();
 		}
 	}
 }
@@ -954,21 +962,21 @@ void cGraphics_PC::Mission_Intro( const std::vector<cPosition>& pPositions, cons
             mSurface->palette_FadeTowardNew();
 
 		// Clouds
-		word_42859 = pPositions[0].mX;
-		word_4285B = pPositions[0].mY;
+		mMission_Intro_DrawX = pPositions[0].mX;
+		mMission_Intro_DrawY = pPositions[0].mY;
 		Mission_Intro_Render_1( mMission_Intro_Gfx_Clouds3, word_42875 );
 
-		word_42859 = pPositions[1].mX;
-		word_4285B = pPositions[1].mY;
+		mMission_Intro_DrawX = pPositions[1].mX;
+		mMission_Intro_DrawY = pPositions[1].mY;
 		Mission_Intro_Render_2( mMission_Intro_Gfx_Clouds2, word_42873 );
 
-		word_42859 = pPositions[2].mX;
-        word_4285B = pPositions[2].mY;
+		mMission_Intro_DrawX = pPositions[2].mX;
+        mMission_Intro_DrawY = pPositions[2].mY;
 		Mission_Intro_Render_2( mMission_Intro_Gfx_Clouds1, word_42871 );
 
 		// Trees (Main)
-		word_42859 = pPositions[3].mX;
-        word_4285B = pPositions[3].mY;
+		mMission_Intro_DrawX = pPositions[3].mX;
+        mMission_Intro_DrawY = pPositions[3].mY;
 		Mission_Intro_Render_1( mMission_Intro_Gfx_TreesMain, word_42871 );
 
 		mFodder->mVideo_Draw_FrameDataPtr = mBriefing_ParaHeli->data() + mBriefing_ParaHeli_Frames[mFodder->mBriefing_ParaHeli_Frame];
@@ -983,8 +991,8 @@ void cGraphics_PC::Mission_Intro( const std::vector<cPosition>& pPositions, cons
                 Video_Draw_8();
         }
 
-		word_42859 = pPositions[4].mX;
-        word_4285B = pPositions[4].mY;
+		mMission_Intro_DrawX = pPositions[4].mX;
+        mMission_Intro_DrawY = pPositions[4].mY;
 		Mission_Intro_Render_2( mImageMissionIntro.mData, word_4286F );
 
 		word_4286F += 8;

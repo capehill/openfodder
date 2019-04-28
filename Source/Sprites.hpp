@@ -79,8 +79,8 @@ enum eSprites {
 	eSprite_Text_Again							= 59,
 
 	eSprite_BoilingPot							= 60,
-	eSprite_Indigenous							= 61,
-	eSprite_Indigenous2							= 62,
+	eSprite_Civilian							= 61,
+	eSprite_Civilian2							= 62,
 	eSprite_VehicleNoGun_Human					= 63,		// Skidu
 	eSprite_VehicleGun_Human					= 64,
 	eSprite_Tank_Human							= 65,
@@ -89,13 +89,13 @@ enum eSprites {
 	eSprite_Seal								= 68,
 	eSprite_Tank_Enemy							= 69,
 
-	eSprite_Indigenous_Spear					= 70,
-	eSprite_Indigenous_Spear2					= 71,
+	eSprite_Civilian_Spear					= 70,
+	eSprite_Civilian_Spear2					= 71,
 	eSprite_Hostage								= 72,
 	eSprite_Hostage_Rescue_Tent					= 73,
-	eSprite_Door_Indigenous						= 74,
-	eSprite_Door2_Indigenous					= 75,
-	eSprite_Door_Indigenous_Spear				= 76,
+	eSprite_Door_Civilian						= 74,
+	eSprite_Door2_Civilian					= 75,
+	eSprite_Door_Civilian_Spear				= 76,
 	eSprite_Cannon								= 77,
 	eSprite_Turret_Missile_Human				= 78,
 	eSprite_Turret_Missile2_Human				= 79,
@@ -103,7 +103,7 @@ enum eSprites {
 	eSprite_VehicleNoGun_Enemy					= 80,
 	eSprite_VehicleGun_Enemy					= 81,
 	eSprite_Vehicle_Unk_Enemy					= 82,
-	eSprite_Indigenous_Invisible				= 83,
+	eSprite_Civilian_Invisible				= 83,
 	eSprite_Turret_Missile_Enemy				= 84,
 	eSprite_Turret_Missile2_Enemy				= 85,
 	eSprite_Vehicle_Sinking_1					= 86,
@@ -111,7 +111,7 @@ enum eSprites {
 	eSprite_BuildingDoor3						= 88,
 	eSprite_Explosion2							= 89,
 
-	eSprite_OpenCloseDoor						= 90,
+	eSprite_Door_Civilian_Rescue				= 90,
 	eSprite_Seal_Mine							= 91,
 	eSprite_Spider_Mine							= 92,
 	eSprite_Bonus_RankToGeneral					= 93,
@@ -128,7 +128,7 @@ enum eSprites {
 	eSprite_Helicopter_Missile_Human_Called		= 103,
 	eSprite_Helicopter_Homing_Human_Called		= 104,
 	eSprite_Turret_HomingMissile_Enemy			= 105,
-	eSprite_Hostage_2							= 106,
+	eSprite_Enemy_Leader						= 106,
 	eSprite_Helicopter_Homing_Enemy2			= 107,
 	eSprite_Computer_1							= 108,
 	eSprite_Computer_2							= 109,
@@ -291,7 +291,8 @@ struct sSprite {
     // Eventually this should be replaced
     // Perhaps a linked list could replace mSprite and we use an iterator here
     union {
-        int32 field_5E;			// Index inside mSprites (if 5D == false)
+		int32 field_5E_Squad;
+        size_t field_5E;			// Index inside mSprites (if 5D == false)
         sMission_Troop *field_5E_SoldierAllocated;  // Soldier Ptr who killed sprite
     };
 
@@ -313,6 +314,20 @@ struct sSprite {
 	sSprite* field_70;		// Hostage: Following Sprite
 	int8 field_74;			// Helicopter: Restart Anim Frame Number
 	int8 field_75;			// Human-Player: 0x02 = invincibility, 0x01 = homing missiles
+
+	sSprite() {
+		Clear();
+	}
+
+	void Clear();
+
+	cPosition *getPosition() { return new cPosition(field_0, field_4); }
+
+	int getX() const { return field_0; }
+	void setX(int pX) { field_0 = pX; }
+
+	int getY() const { return field_4; }
+	void setY(int pY) { field_4 = pY; }
 };
 
 struct sWeaponData {
@@ -346,7 +361,7 @@ extern const int16 mSprite_VehiclePosition_Mod[];
 extern const int16 mSprite_Computer_Animation[];
 extern const int16 mSprite_Seal_Frames[];
 extern const int16 mSprite_Computer_Frames[];
-extern const int8 mSprite_Indigenous_Sound_Death[];
+extern const int8 mSprite_Civilian_Sound_Death[];
 extern const int8 mSprite_Soldier_Unk[];
 extern const int16 mSprite_Direction_Frame_Unk[];
 extern const int16* mSprite_AnimationPtrs[];

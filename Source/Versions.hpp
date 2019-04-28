@@ -20,148 +20,41 @@
  *
  */
 
-enum ePlatform {
-    Any     = 0,
-	PC		= 1,
-	Amiga	= 2
-};
-
-enum eRelease {
-	Retail		= 0,
-    PCFormat,
-	AmigaXMAS,
-	AmigaPower,
-    AmigaTheOne,
-    AmigaAction,
-    AmigaNotVeryFestive,
-
-	Custom
-};
-
-enum eGame {
-	CF1 = 0,
-	CF2 = 1
-};
-
-enum eCustomMode {
-	eCustomMode_None = 0,
-	eCustomMode_Map = 1,
-	eCustomMode_Set = 2
-};
-
 struct sFile {
 	const char* mName;
 	const char* mChecksum;
-};
-
-struct sRelease {
-	std::string			mName;
-
-	eGame				mGame;
-	ePlatform			mPlatform;
-	eRelease			mRelease;
-
-    sRelease() {
-        mName = "";
-        mGame = eGame::CF1;
-        mPlatform = ePlatform::Any;
-        mRelease = eRelease::Retail;
-    }
 };
 
 class cResources;
 class cGraphics;
 class cSound;
 
+struct sGameVersion : public sVersion {
 
-struct sGameVersion {
-	const std::string	mName;
-
-	const eGame				mGame;
-	const ePlatform			mPlatform;
-	const eRelease			mRelease;
-
-	const std::vector<sIntroText>	mIntroData;
-	const std::string	            mDataPath;
+	const std::string				mDataPath;
 	const std::vector<sFile>		mFiles;
 
-	const std::vector<eTileTypes>	mTileTypes;
-	const std::vector<eGFX_Types>   mGfxTypes;
-
+	sGameVersion(const std::string& pName, eGame pGame, ePlatform pPlatform, eRelease pRelease, const std::string& pDataPath, const std::vector<sFile>& pFiles) :
+		sVersion(pName,pGame,pPlatform,pRelease), mDataPath(pDataPath), mFiles(pFiles) {
+	
+	}
 
 	bool hasGfx(eGFX_Types pGfxType) const {
-		return std::find(mGfxTypes.begin(), mGfxTypes.end(), pGfxType) != mGfxTypes.end();
+		auto gfx = getGfxTypes();
+		return std::find(gfx.begin(), gfx.end(), pGfxType) != gfx.end();
 	}
 
-	bool hasTileset(eTileTypes pTileType) const {
-		return std::find(mTileTypes.begin(), mTileTypes.end(), pTileType) != mTileTypes.end();
-	}
+	bool hasTileset(eTileTypes pTileType, eTileSub pSub = eTileSub::eTileSub_0 ) const {
+		auto tiles = getTileTypes();
 
-    bool isCannonFodder1() const {
-        return mGame == eGame::CF1;
-    }
+		return std::find_if(tiles.begin(), tiles.end(),
+			[pTileType, pSub](const sTileset& ms) {
+				if (ms.Type != pTileType)
+					return false;
 
-    bool isCannonFodder2() const {
-        return mGame == eGame::CF2;
-    }
-
-	bool isCustom() const {
-		return mRelease == eRelease::Custom;
-	}
-
-    /**
-     * Is this version a demo?
-     *
-     * NOTE: The PC-Format version is not considered a demo, as it is very close to the dos retail
-     */
-	bool isDemo() const {
-		return 	mRelease == eRelease::AmigaXMAS || 
-				mRelease == eRelease::AmigaPower ||
-                mRelease == eRelease::AmigaTheOne ||
-                mRelease == eRelease::AmigaAction ||
-                mRelease == eRelease::AmigaNotVeryFestive ||
-				mRelease == eRelease::Custom;
-	}
-
-    bool isCoverDisk() const {
-
-        return (isAmigaPower() || isAmigaAction() || isAmigaTheOne());
-    }
-
-	bool isRetail() const {
-		return mRelease == eRelease::Retail;
-	}
-
-    bool isPCFormat() const {
-        return mRelease == eRelease::PCFormat;
-    }
-
-	bool isAmigaXmas() const {
-		return mRelease == eRelease::AmigaXMAS;
-	}
-
-	bool isAmigaPower() const {
-		return mRelease == eRelease::AmigaPower;
-	}
-
-    bool isAmigaTheOne() const {
-        return mRelease == eRelease::AmigaTheOne;
-    }
-
-    bool isAmigaAction() const {
-        return mRelease == eRelease::AmigaAction;
-    }
-
-    bool isAmigaNotVeryFestive() const {
-        return mRelease == eRelease::AmigaNotVeryFestive;
-    }
-
-    bool isAmiga() const {
-        return mPlatform == ePlatform::Amiga;
-    }
-
-	bool isPC() const {
-		return mPlatform == ePlatform::PC;
+				return std::find(ms.Subs.begin(), ms.Subs.end(), pSub) != ms.Subs.end();
+		}
+		) != tiles.end();
 	}
 
     bool hasBriefingScreen() const {
@@ -179,13 +72,6 @@ struct sGameVersion {
         return { 320,200 };
     }
 
-    cDimension GetOriginalRes() const {
-        if (isAmiga())
-            return { 320,225 };
-
-        return { 320,200 };
-    }
-
     cDimension GetSecondScreenSize() const {
         if (isAmiga())
             return { 320,260 };
@@ -193,30 +79,36 @@ struct sGameVersion {
         return { 320,200 };
     }
 
-    std::shared_ptr<cResources> GetResources(const std::string& pDataPathOverride) const;
+	std::vector<eGFX_Types> getGfxTypes() const;
+	std::vector<sTileset> getTileTypes() const;
+
+	std::vector<sIntroText>* getIntroData() const;
+
+    std::shared_ptr<cResources> GetResources() const;
     std::shared_ptr<cGraphics> GetGraphics() const;
     std::shared_ptr<cSound> GetSound() const;
+	bool CanUseAmigaSound() const;
+
+	std::string getDataPath() const;
+	std::string getDataFilePath(std::string pFile) const;
 };
 
 class cVersions {
 
-    std::vector<const sGameVersion*> mAvailable;
-
 protected:
-    void FindKnownVersions();
 
 public:
-    cVersions();
 
     bool isCampaignKnown(const std::string& pName) const;
     bool isCampaignAvailable(const std::string& pName) const;
-    bool isDataAvailable() const;
 
     std::vector<std::string> GetCampaignNames() const;
 
     const sGameVersion* GetForCampaign(const std::string& pCampaign) const;
     const sGameVersion* GetForCampaign(const std::string& pCampaign, const ePlatform pPlatform) const;
-    const sGameVersion* GetForTileset(eTileTypes pTileType) const;
-    const sGameVersion* GetRetail(const ePlatform pPlatform) const;
+    const sGameVersion* GetForTileset(eTileTypes pTileType, eTileSub pSub) const;
+    const sGameVersion* GetRetail(const ePlatform pPlatform, const eGame pGame) const;
     const sGameVersion* GetDemo() const;
 };
+
+extern const sGameVersion KnownGameVersions[20];

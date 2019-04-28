@@ -66,9 +66,9 @@ protected:
 	
 	virtual void		DrawPixel(uint8* pSource, uint8* pDestination, uint16 pSourceX, uint16 pSourceY, uint16 pX, uint16 pY);
 	virtual void		DrawPixels_8( uint8* pSource, uint8* pDestination );
-	virtual void		DrawPixels_16( uint8* pSource, uint8* pDestination );
+	virtual void		DrawPixels_16( uint8* pSource, uint8* pDestination, const uint8 pPalleteIndex );
 
-	virtual void		Load_And_Draw_Image( const std::string &pFilename, unsigned int pColors = 0, unsigned int pBackColor = 0 );
+	virtual void		Load_And_Draw_Image( const std::string &pFilename, unsigned int pColors = 0, size_t pBackColor = 0 );
 
 	virtual uint8*		GetSpriteData( uint16 pSegment );
 	virtual void		Mouse_DrawCursor();
@@ -91,8 +91,9 @@ protected:
 	virtual void		PaletteLoad( const uint8  *pBuffer, uint32 pColors, uint32 pColorID = 0 );
 
 	virtual void		Video_Draw_16_Offset( int16 pCx );
-	virtual void		Video_Draw_16();
-	virtual void		Video_Draw_8(cSurface *pTarget = 0);
+	virtual void		Video_Draw_16( const uint8* RowPallete = 0 );
+	virtual void		Video_Draw_8( cSurface *pTarget = 0, const uint8* RowPallete = 0 );
+    virtual void		Video_Draw_8_Alt( const uint8* RowPallete = 0 );
 
 	virtual void		SetActiveSpriteSheet(eGFX_Types pSpriteType );
 
@@ -105,8 +106,8 @@ protected:
 	virtual bool		Sprite_OnScreen_Check(  );
 	virtual bool		Sprite_OnScreen_Check( bool p16bit = false );
 
-	virtual void		Mission_Intro_Play( const bool pShowHelicopter );
-	virtual void		Mission_Intro_Load_Resources();
+	virtual void		Mission_Intro_Play( const bool pShowHelicopter, const eTileTypes pTileset);
+	virtual void		Mission_Intro_Load_Resources(const eTileTypes pTileset);
 	virtual void		Mission_Intro_DrawHelicopter( uint16 pID );
 
 	virtual void		Recruit_Draw_Hill();

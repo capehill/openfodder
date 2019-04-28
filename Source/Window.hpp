@@ -42,12 +42,11 @@ class cWindow {
 
 	protected:
 
-		void				SetWindowSize( const int pMultiplier  );
 
 	public:
 
 							cWindow();
-							~cWindow();
+		virtual				~cWindow();
 
 		void		        CalculateWindowSize();
 		int16				CalculateFullscreenSize();
@@ -86,6 +85,7 @@ class cWindow {
 		void				SetOriginalRes( const cDimension& pDimension );
 
 		void				SetWindowTitle( const std::string& pWindowTitle );
+		void				SetWindowSize(const int pMultiplier);
 
 		void				ToggleFullscreen();
 		void				ClearResized();
@@ -93,6 +93,9 @@ class cWindow {
 		SDL_Renderer*		GetRenderer() const { return mRenderer; };
 
         cPosition           GetWindowPosition() const;
+		int32				GetWindowWidth() const;
+		int32				GetWindowHeight() const;
+
 		cDimension	        GetWindowSize() const;
 		cDimension	        GetScreenSize() const { return mScreenSize; }
 		bool			    GetWindowMode() const { return mWindowMode; }
@@ -105,6 +108,6 @@ class cWindow {
 class cWindowNull : public cWindow {
 
 public:
-
+	virtual ~cWindowNull() {}
     virtual bool InitWindow(const std::string& pWindowTitle);
 };

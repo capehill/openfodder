@@ -59,10 +59,10 @@ std::string cCampaign::GetPathToFile(const std::string& pName) const {
 std::string cCampaign::GetPath( const bool pTrailingSeperator ) const {
     std::string path;
 
-    if (mUseCustomPath)
-        path = mPath;
-    else 
-        path = local_PathGenerate(mName, "", eDataType::eCampaign);
+	if (mUseCustomPath)
+		path = mPath;
+	else
+		path = g_ResourceMan->GetCampaignData(mName);
 
     if(pTrailingSeperator && path.size())
         path += gPathSeperator;
@@ -110,7 +110,7 @@ bool cCampaign::LoadCustomMap(const std::string& pMapName) {
 
     // TODO: Try load these from file before using defaults
     Phase->mName = CustomMapName;
-    Phase->mGoals.push_back({ eGoal_Kill_All_Enemy });
+    Phase->mGoals.push_back({ eObjective_Kill_All_Enemy });
     Phase->mAggression = { 4, 8 };
 
     mIsCustomMap = true;
@@ -119,7 +119,7 @@ bool cCampaign::LoadCustomMap(const std::string& pMapName) {
 
 bool cCampaign::SaveCampaign() {
     Json Campaign;
-    Campaign["Author"] = "Sensible Software";
+    Campaign["Author"] = mAuthor;
     Campaign["Name"] = mName;
 
     // Each Mission
@@ -155,17 +155,6 @@ bool cCampaign::SaveCampaign() {
     }
 
     return false;
-}
-
-/**
- * Test if a campaign is available
- */
-bool cCampaign::isAvailable(const std::string& pName ) const {
-    if (!pName.size())
-        return false;
-
-    auto File = local_PathGenerate(pName, "", eDataType::eCampaign) + ".ofc";
-    return local_FileExists(File);
 }
 
 /**
@@ -231,7 +220,7 @@ bool cCampaign::LoadCampaign(const std::string& pName, bool pCustom, bool pDirec
                     for (const std::string& GoalTitle : mMissionGoal_Titles) {
                         ++x;
                         if (GoalTitle == ObjectiveName) {
-                            newPhase->mGoals.push_back(static_cast<ePhaseGoals>(x));
+                            newPhase->mGoals.push_back(static_cast<ePhaseObjective>(x));
                             break;
                         }
                     }
@@ -264,16 +253,23 @@ void cCampaign::Clear(const std::string& pName, const bool pDirectPath) {
     mMissions.clear();
 }
 
+std::shared_ptr<cMap> cCampaign::getCMap(std::shared_ptr<cPhase> pPhase) const {
+
+	auto map = std::make_shared<cOriginalMap>(getMap(pPhase), getSprites(pPhase), mName == "Cannon Fodder 2");
+
+	return map;
+}
+
 tSharedBuffer cCampaign::getMap(std::shared_ptr<cPhase> pPhase) const {
     std::string FinalName = pPhase->mMapFilename + ".map";
     std::string FinalPath = GetPathToFile(FinalName);
 
     // If no campaign folder exists, load from the currently loaded resource
-    if (!local_FileExists(FinalPath))
+    if (!g_ResourceMan->FileExists(FinalPath))
         return g_Resource->fileGet(FinalName);
 
     // Otherwise load it from the campaign path
-    return local_FileRead(FinalPath, "", eNone);
+    return g_ResourceMan->FileRead(FinalPath);
 }
 
 tSharedBuffer cCampaign::getSprites(std::shared_ptr<cPhase> pPhase) const {
@@ -281,11 +277,11 @@ tSharedBuffer cCampaign::getSprites(std::shared_ptr<cPhase> pPhase) const {
     std::string FinalPath = GetPathToFile(FinalName);
 
     // If no campaign folder exists, load from the currently loaded resource
-    if (!local_FileExists(FinalPath))
+    if (!g_ResourceMan->FileExists(FinalPath))
         return g_Resource->fileGet(FinalName);
 
     // Otherwise load it from the campaign path
-    return local_FileRead(FinalPath, "", eNone);
+    return g_ResourceMan->FileRead(FinalPath);
 }
 
 /**
@@ -305,12 +301,25 @@ void cCampaign::SetSingleMapCampaign() {
     Clear("Single Map", false);
     mPath = "";
 
-    mMissions.clear();
     mMissions.push_back(std::make_shared<cMission>());
     mMissions.back()->mPhases.push_back(std::make_shared<cPhase>());
 }
 
-const std::string cCampaign::getName() const {
+void cCampaign::SetCustomCampaign() {
+	mIsCustomCampaign = true; 
+	mUseCustomPath = false;
+
+	Clear();
+}
+
+void cCampaign::CreateCustomCampaign() {
+	SetCustomCampaign();
+
+	mMissions.push_back(std::make_shared<cMission>());
+	mMissions.back()->mPhases.push_back(std::make_shared<cPhase>());
+}
+
+std::string cCampaign::getName() const {
     return mName;
 }
 

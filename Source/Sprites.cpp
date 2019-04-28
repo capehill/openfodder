@@ -24,7 +24,7 @@
 
 #define SpriteTableFunction(x, y) mSprite_Function[x] = &cFodder::y;
 
-#define SpriteFunction(name) mSprite_Function[eSprite_##name] = &cFodder::Sprite_Handle_##name;
+#define SpriteFunction(name) mSprite_Function[eSprite_##name] = &cFodder::Sprite_Handle_##name; mSprite_Names[eSprite_##name] = #name;
 
 
 void cFodder::Sprite_Table_Setup() {
@@ -125,8 +125,8 @@ void cFodder::Sprite_Table_Setup() {
 
 	/* 60 */
 	SpriteFunction( BoilingPot );
-	SpriteFunction( Indigenous );
-	SpriteFunction( Indigenous2 );
+	SpriteFunction( Civilian );
+	SpriteFunction( Civilian2 );
 	SpriteFunction( VehicleNoGun_Human );
 
 	/* 64 */
@@ -138,17 +138,17 @@ void cFodder::Sprite_Table_Setup() {
 	/* 68 */
 	SpriteFunction( Seal );
 	SpriteFunction( Tank_Enemy );
-	SpriteFunction( Indigenous_Spear );
-	SpriteFunction( Indigenous_Spear2 );
+	SpriteFunction( Civilian_Spear );
+	SpriteFunction( Civilian_Spear2 );
 
 	/* 72 */
 	SpriteFunction( Hostage );
 	SpriteFunction( Hostage_Rescue_Tent );
-	SpriteFunction( Door_Indigenous );
-	SpriteFunction( Door2_Indigenous );
+	SpriteFunction( Door_Civilian );
+	SpriteFunction( Door2_Civilian );
 
 	/* 76 */
-	SpriteFunction( Door_Indigenous_Spear );
+	SpriteFunction( Door_Civilian_Spear );
 	SpriteFunction( Cannon );
 	SpriteFunction( Turret_Missile_Human );
 	SpriteFunction( Turret_Missile2_Human );
@@ -157,7 +157,7 @@ void cFodder::Sprite_Table_Setup() {
 	SpriteFunction( VehicleNoGun_Enemy );
 	SpriteFunction( VehicleGun_Enemy );
 	SpriteFunction( Vehicle_Unk_Enemy );
-	SpriteFunction( Indigenous_Invisible );
+	SpriteFunction( Civilian_Invisible );
 
 	/* 84 */
 	SpriteFunction( Turret_Missile_Enemy );
@@ -168,7 +168,7 @@ void cFodder::Sprite_Table_Setup() {
 	/* 88 */
 	SpriteFunction( BuildingDoor3 );
 	SpriteFunction( Explosion2 );
-	SpriteFunction( OpenCloseDoor );
+	SpriteFunction( Door_Civilian_Rescue );
 	SpriteFunction( Seal_Mine);
 
 	/* 92 */
@@ -192,7 +192,7 @@ void cFodder::Sprite_Table_Setup() {
 	/* 104 */
 	SpriteFunction( Helicopter_Homing_Human_Called );
 	SpriteFunction( Turret_HomingMissile_Enemy );
-	SpriteFunction( Hostage_2 );
+	SpriteFunction( Enemy_Leader );
 	SpriteFunction( Helicopter_Homing_Enemy2 );
 
 	/* 108 */
@@ -433,7 +433,7 @@ const int16 mSprite_Computer_Frames[] = {
 	1, 0, 4, 0
 };
 
-const int8 mSprite_Indigenous_Sound_Death[] = {
+const int8 mSprite_Civilian_Sound_Death[] = {
 	0x0B, 0x0C, 0x0D, 0x14, 0x15, 0x16, 0x0D, 0x14
 };
 
@@ -649,8 +649,8 @@ const sSpriteSheet_pstuff mSpriteSheet_PStuff[209] = {
 	{ 272, 93, 16, 19 },
 	{ 288, 93, 16, 19 },
 	{ 160, 93, 32, 19 },
-	{ 0, 175, 48, 23 },				// Briefing Helicopter: Front
-	{ 48, 175, 16, 15 },			// Briefing Helicopter: Tail
+	{ 0, 178, 48, 22 },				// Briefing Helicopter: Front
+	{ 48, 178, 16, 14 },			// Briefing Helicopter: Tail
 	/* 205 */{ 64, 175, 48, 2 },	// Briefing Helicopter: Blade-1
 	/* 206 */{ 64, 178, 48, 2 },	// Briefing Helicopter: Blade-2
 	/* 207 */{ 64, 181, 48, 2 },	// Briefing Helicopter: Blade-3
@@ -776,3 +776,75 @@ const std::vector<std::vector<int16>> mSoldier_Squad_Fire_RotationOrder = {
 	mSoldier_Squad_Fire_RotationSquadOf7,
 	mSoldier_Squad_Fire_RotationSquadOf8
 };
+
+void sSprite::Clear() {
+	field_0 = -32768;
+	field_2 = 0;
+	field_4 = 0;
+	field_6 = 0;
+	field_8 = 0;
+	field_A = 0;
+	field_C = 0;
+	field_E = 0;
+	field_10 = 0;
+	field_12 = 0;
+	field_14 = 0;
+	field_16 = 0;
+	field_18 = 0;
+	field_1A_sprite = 0;
+	field_1E = 0;
+	field_20 = 0;
+	field_22 = eSprite_PersonType_Human;
+	field_24 = 0;
+	field_26 = 0;
+	field_28 = 0;
+	field_2A = 0;
+	field_2C = eSprite_Draw_Second;
+	field_2E = 0;
+	field_30 = 0;
+	field_32 = 0;
+	field_34 = 0;
+	field_36 = 0;
+	field_38 = eSprite_Anim_None;
+	field_3A = 0;
+	field_3C = 0;
+	field_3E = 0;
+	field_40 = 0;
+	field_42 = 0;
+	field_43 = 0;
+	field_44 = 0;
+	field_45 = 0;
+	field_46_sprite = 0;
+	field_4A = 0;
+	field_4C = 0;
+	field_4D = 0;
+	field_4E = 0;
+	field_4F = 0;
+	field_50 = 0;
+	field_52 = 0;
+	field_54 = 0;
+	field_55 = 0;
+	field_56 = 0;
+	field_57 = 0;
+	field_58 = 0;
+	field_59 = 0;
+	field_5A = 0;
+	field_5B = 0;
+	field_5C = 0;
+	field_5D = 0;
+	field_5E = 0;
+	field_5E_Squad = 0;
+	field_5E_SoldierAllocated = 0;
+	field_60 = 0;
+	field_61 = 0;
+	field_62 = 0;
+	field_64 = 0;
+	field_65 = 0;
+	field_66 = 0;
+	field_6A_sprite = 0;
+	field_6E = 0;
+	field_6F = 0;
+	field_70 = 0;
+	field_74 = 0;
+	field_75 = 0;
+}

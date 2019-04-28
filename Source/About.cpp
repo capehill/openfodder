@@ -47,19 +47,26 @@ cAbout::cAbout() {
         { TEXTPOS_TEAM + 20 , "PROJECT LEAD" },
         { TEXTPOS_TEAM + 30,  "ROBERT CROSSFIELD" },
 
-        { TEXTPOS_TEAM + 80, "TESTING" },
+        { TEXTPOS_TEAM + 80, "ENGINE" },
         { TEXTPOS_TEAM + 90, "ALESSANDRO PETRALIA" },
+
+		{ TEXTPOS_TEAM + 110, "SCRIPTING" },
+		{ TEXTPOS_TEAM + 120, "STARWINDZ" },
+
 
         { TEXTPOS_THANKS + 0 , "THANKS TO" },
         { TEXTPOS_THANKS + 10, "SENSIBLE SOFTWARE"},
-        { TEXTPOS_THANKS + 20, "CLAIRE CROSSFIELD"},
-        { TEXTPOS_THANKS + 30, "LACHIE CROSSFIELD"},
-        { TEXTPOS_THANKS + 40, "RILEY ELLETT"},
-        { TEXTPOS_THANKS + 50, "SCUMMVM"},
+		{ TEXTPOS_THANKS + 20, "STOO CAMBRIDGE"},
+        { TEXTPOS_THANKS + 30, "CLAIRE CROSSFIELD"},
+        { TEXTPOS_THANKS + 40, "LACHIE CROSSFIELD"},
+        { TEXTPOS_THANKS + 50, "RILEY ELLETT"},
+        { TEXTPOS_THANKS + 60, "SCUMMVM"},
 
         { TEXTPOS_POWERED + 0,  "POWERED BY"},
         { TEXTPOS_POWERED + 10, "CPP14"},
         { TEXTPOS_POWERED + 20, "SDL2"},
+		{ TEXTPOS_POWERED + 30, "DUKTAPE"},
+		{ TEXTPOS_POWERED + 40, "DUKGLUE"},
 
         // Just for fun: loc_2B48E
         { 1100, "PUSH CX"},
@@ -77,9 +84,9 @@ cAbout::cAbout() {
     };
 
     mSurface = new cSurface(0, 0);
-    mSurface->LoadBitmap(local_PathGenerate("about.bmp", "", eDataType::eRoot).c_str());
+    mSurface->LoadBitmap(g_ResourceMan->GetAboutFile());
     g_Fodder->mGraphics->PaletteSet();
-    g_Fodder->Mission_Memory_Clear();
+    g_Fodder->Phase_EngineReset();
     g_Fodder->mMouseSpriteNew = eSprite_pStuff_Mouse_Target;
     g_Fodder->mService_Draw_List.clear();
 

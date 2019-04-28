@@ -1,27 +1,29 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerWorkingDirectory>$(ProjectDir)..\..\run</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerCommandArguments>
     </LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerWorkingDirectory>$(ProjectDir)..\..\run</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerCommandArguments>
     </LocalDebuggerCommandArguments>
-    <LocalDebuggerCommand>$(OutDir)..\..\..\..\Run\$(TargetName)$(TargetExt)</LocalDebuggerCommand>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_JSDebug|x64'">
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArguments />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LocalDebuggerWorkingDirectory>$(ProjectDir)..\..\run_x86</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>
-    </LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>--window --window-scale 2 --random --campaign "Cannon Fodder" --skipintro --columns 40 --rows 30</LocalDebuggerCommandArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_JSDebug|Win32'">
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArguments>--window --window-scale 2 --random --campaign "Cannon Fodder" --skipintro --columns 40 --rows 30  --debugger</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LocalDebuggerWorkingDirectory>$(ProjectDir)..\..\run_x86  </LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>--campaign "Cannon Fodder 2" --skipintro --mission 4 --phase 1 --skipbriefing --pc</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>--window --window-scale 2 --random --campaign "Cannon Fodder" --skipintro --columns 40 --rows 30 --debugger</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>

@@ -1165,24 +1165,8 @@ int16 cFodder::Recruit_Show() {
     else {
         if (mVersionCurrent->mName == "Random Map") {
 
-            std::string RandomMapFile = local_PathGenerate("random.map", "Custom/Maps", eData);
-            Map_Create(mTileTypes[0], 0, tool_RandomGet(28, 70), tool_RandomGet(22, 70), true);
-            Map_Save(RandomMapFile);
-
-            mGame_Data.mCampaign.LoadCustomMapFromPath(RandomMapFile);
-            mGame_Data.mCampaign.setRandom(true);
-
-            mGame_Data.mMission_Phases_Remaining = 1;
-            mGame_Data.mMission_Number = 1;
-            mGame_Data.mMission_Phase = 1;
-            mGame_Data.Phase_Start();
-
-            auto Phase = mGame_Data.mCampaign.getMission(0)->GetPhase(0);
-            int16 Min = (tool_RandomGet() % 5);
-            int16 Max = Min + (tool_RandomGet() % 5);
-
-            Phase->mAggression = { Min, Max };
-            Phase->mGoals = { eGoal_Kill_All_Enemy, eGoal_Destroy_Enemy_Buildings };
+			CreateRandom();
+			mGame_Data.mMission_Recruitment = 0;
         }
         else {
             Custom_ShowMapSelection();
@@ -1196,6 +1180,9 @@ int16 cFodder::Recruit_Show() {
 
     // Single Map does not have a recruit screen
     if (mCustom_Mode != eCustomMode_Map) {
+
+		if (!mStartParams->mDisableSound)
+			mSound->Music_Play(0);
 
         // Retail / Custom set show the Recruitment Hill
         if (mVersionCurrent->isRetail() || mVersionCurrent->isPCFormat() || mCustom_Mode == eCustomMode_Set) {
@@ -1232,7 +1219,7 @@ int16 cFodder::Recruit_Show() {
     }
 
     mRecruit_Mission_Restarting = false;
-    Mission_Memory_Backup();
+    GameData_Backup();
 
     // Retail or Custom Mode
     if (mVersionCurrent->isRetail() ||
@@ -1240,7 +1227,7 @@ int16 cFodder::Recruit_Show() {
         Map_Load();
 
         // Show the intro for the briefing screen
-        Mission_Intro_Play();
+        Mission_Intro_Play( false, mMapLoaded->getTileType() );
     }
 
     mGraphics->Load_pStuff();
@@ -1295,6 +1282,8 @@ bool cFodder::Recruit_Loop() {
         if (mVersionCurrent->isDemo())
             return 0;
     }
+
+	mWindow->SetScreenSize(mVersionCurrent->GetScreenSize());
 
     Mouse_Setup();
 
@@ -1428,14 +1417,14 @@ void cFodder::Recruit_Draw_Grave(int16 pSpriteType, const size_t pPosX, const si
 void cFodder::Recruit_Draw_Graves() {
     auto GraveIT = mGravePositions.rbegin();
 
-    if (mGame_Data.mSoldiers_Died.empty())
+    if (mGame_Data.mHeroes.empty())
         return;
 
-    for (size_t i = mGame_Data.mSoldiers_Died.size(); i > 0; --i) {
+    for (size_t i = mGame_Data.mHeroes.size(); i > 0; --i) {
         ++GraveIT;
     }
 
-    for (auto& Hero : mGame_Data.mSoldiers_Died) {
+    for (auto& Hero : mGame_Data.mHeroes) {
         --GraveIT;
         Recruit_Draw_Grave(Hero.mRank, GraveIT->mX, GraveIT->mY + PLATFORM_BASED(0, 6));
     };
@@ -1917,7 +1906,7 @@ void cFodder::Recruit_Frame_Check() {
 void cFodder::Recruit_Position_Troops() {
     const int16*    Recruit_Next_Shirt = mRecruit_Shirt_Colors;
 
-    uint64 Data8 = mGame_Data.mSoldiers_Died.size();
+    uint64 Data8 = mGame_Data.mHeroes.size();
     int16 Recruits, Data4;
 
     // Calculate number of dead troops

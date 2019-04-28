@@ -29,8 +29,11 @@ const std::vector<sTileType> mTileTypes = {
 	{ eTileTypes_Moors,  "mor", "Moors"			},
 	{ eTileTypes_Int,	 "int", "Interior"		},
 	{ eTileTypes_Hid,	 "hid", "Hid"			},      // Unknown
-	{ eTileTypes_AFX,	 "afx", "Amiga Format"	}		// Amiga Format Christmas Special
+	{ eTileTypes_AFX,	 "afx", "AmigaFormat"	}		// Amiga Format Christmas Special
 };
+
+const int16 TILE_WIDTH_PIXELS = 16;
+const int16 TILE_HEIGHT_PIXELS = 16;
 
 const int16* mTiles_Indestructible[] = {
 	mTiles_Indestructible_Jungle,		// JUN       

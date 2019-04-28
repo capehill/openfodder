@@ -22,58 +22,12 @@
 
 #include "stdafx.hpp"
 #include <chrono>
-
 #include "Utils/json.hpp"
+
 using Json = nlohmann::json;
 
 const char* DEMO_EXTENSION = ".ofd";
-
-std::string sFodderParameters::ToJson() {
-    Json Save;
-
-    Save["mSkipIntro"] = mSkipIntro;
-    Save["mSkipToMission"] = mSkipRecruit;
-    Save["mSkipBriefing"] = mSkipBriefing;
-    Save["mSkipService"] = mSkipService;
-
-    Save["mWindowMode"] = mWindowMode;
-    Save["mRandom"] = mRandom ;
-    Save["mDefaultPlatform"] = mDefaultPlatform;
-    Save["mCampaignName"] = mCampaignName;
-    Save["mMissionNumber"] = mMissionNumber;
-    Save["mPhaseNumber"] = mPhaseNumber;
-
-    Save["mUnitTesting"] = mUnitTesting;
-    Save["mSinglePhase"] = mSinglePhase;
-
-    return Save.dump(1);
-}
-
-bool sFodderParameters::FromJson(const std::string& pJson) {
-    Json LoadedData;
-
-    try {
-        LoadedData = Json::parse(pJson);
-    } catch (std::exception Exception) {
-        std::cout << "SaveGame JSON Parsing Error: " << Exception.what() << "\n";
-        return false;
-    }
-
-    mSkipService = LoadedData["mSkipService"];
-    mSkipBriefing = LoadedData["mSkipBriefing"];
-    mSkipIntro = LoadedData["mSkipIntro"];
-    mSkipRecruit = LoadedData["mSkipToMission"];
-    mMissionNumber = LoadedData["mMissionNumber"];
-    mPhaseNumber = LoadedData["mPhaseNumber"];
-    mWindowMode = LoadedData["mWindowMode"];
-    mRandom = LoadedData["mRandom"];
-    mDefaultPlatform = LoadedData["mDefaultPlatform"];
-    mCampaignName = LoadedData["mCampaignName"];
-    mUnitTesting = LoadedData["mUnitTesting"];
-    mSinglePhase = LoadedData["mSinglePhase"];
-
-    return true;
-}
+const size_t DEMO_CURRENT_VERSION = 3;
 
 sGamePhaseData::sGamePhaseData() {
     Clear();
@@ -82,6 +36,7 @@ sGamePhaseData::sGamePhaseData() {
 void sGamePhaseData::Clear() {
     mSprite_Enemy_AggressionAverage = 0;
     mSprite_Enemy_AggressionMin = 0;
+    mSprite_Enemy_AggressionMax = 0;
     mSprite_Enemy_AggressionMax = 0;
     mSprite_Enemy_AggressionNext = 0;
     mSprite_Enemy_AggressionIncrement = 0;
@@ -92,7 +47,7 @@ void sGamePhaseData::Clear() {
     mSoldiers_Available = 0;
     mSoldiers_Prepare_SetFromSpritePtrs = false;
 
-    mTroops_DiedCount = 0;
+    mHeroesCount = 0;
 
     mIsComplete = false;
 
@@ -101,7 +56,7 @@ void sGamePhaseData::Clear() {
 }
 
 sGameRecorded::sGameRecorded() {
-    mVersion = 2;
+    mVersion = DEMO_CURRENT_VERSION;
     mTick = 0;
     mTickDisabled = false;
 
@@ -109,7 +64,7 @@ sGameRecorded::sGameRecorded() {
     mInputTicks = 0;
     mEngineTicks = 0;
     mRecordedPlatform = ePlatform::Any;
-
+	mParams = std::make_shared<sFodderParameters>();
 }
 void sGameRecorded::AddEvent(const uint64 pTicks, const cEvent& pEvent) {
     if (mTickDisabled)
@@ -164,7 +119,7 @@ void sGameRecorded::removeFrom(const uint64 pTicks) {
 }
 
 void sGameRecorded::clear() {
-    mVersion = 2;
+    mVersion = DEMO_CURRENT_VERSION;
 
     mState.clear();
     mEvents.clear();
@@ -172,38 +127,35 @@ void sGameRecorded::clear() {
     mTick = 0;
     mTickDisabled = false;
 
-    mSeed[0] = g_Fodder->mRandom_0;
-    mSeed[1] = g_Fodder->mRandom_1;
-    mSeed[2] = g_Fodder->mRandom_2;
-    mSeed[3] = g_Fodder->mRandom_3;
+	g_Fodder->mRandom.getSeeds(mSeed[0], mSeed[1], mSeed[2], mSeed[3]);
+
     mInputTicks = g_Fodder->mGame_InputTicks;
     mEngineTicks = g_Fodder->mMission_EngineTicks;
 
     if (g_Fodder->mVersionCurrent)
         mRecordedPlatform = g_Fodder->mVersionCurrent->mPlatform;
     else
-        mRecordedPlatform = g_Fodder->mParams.mDefaultPlatform;
+        mRecordedPlatform = g_Fodder->mParams->mDefaultPlatform;
 
-    mParams = g_Fodder->mParams;
+    *mParams = *g_Fodder->mParams;
 }
 
 void sGameRecorded::playback() {
+
+	//
     g_Fodder->mMission_EngineTicks = mEngineTicks;
     g_Fodder->mGame_InputTicks = mInputTicks;
     mTick = 0;
     mTickDisabled = false;
+    g_Fodder->mRandom.setSeed(mSeed[0], mSeed[1], mSeed[2], mSeed[3]);
 
-    g_Fodder->mRandom_0 = mSeed[0];
-    g_Fodder->mRandom_1 = mSeed[1];
-    g_Fodder->mRandom_2 = mSeed[2];
-    g_Fodder->mRandom_3 = mSeed[3];
-
-    g_Fodder->mParams = mParams;
+    *g_Fodder->mParams = *mParams;
 }
 
 void sGameRecorded::DisableTicks() {
-    // Version 1 Savegames didnt stop ticks 
-    // Version 2 Savegames stop ticks during image fadeout/fadein
+    // Version 1 Demos didnt stop ticks 
+    // Version 2 Demos stop ticks during image fadeout/fadein
+	// Version 3 Demos have an greater number of sprites
     if (mVersion >= 2)
         mTickDisabled = true;
 }
@@ -220,8 +172,8 @@ void sGameRecorded::Tick() {
 
 void sGameRecorded::save() {
 
-    if (g_Fodder->mParams.mDemoRecord) {
-        std::string Filename = g_Fodder->mParams.mDemoFile;
+    if (g_Fodder->mParams->mDemoRecord) {
+        std::string Filename = g_Fodder->mParams->mDemoFile;
         if (Filename == "-") {
             Filename = std::to_string(g_Fodder->mGame_Data.mMission_Number);
             Filename += "-";
@@ -254,7 +206,7 @@ std::string sGameRecorded::ToJson() {
     Save["InputTicks"] = mInputTicks;
     Save["mEngineTicks"] = mEngineTicks;
 
-    Save["mParams"] = mParams.ToJson();
+    Save["mParams"] = mParams->ToJson();
     Save["mPlatform"] = mRecordedPlatform;
 
     for (auto& Event : mEvents) {
@@ -308,7 +260,7 @@ bool sGameRecorded::FromJson(const std::string& pJson) {
             mEngineTicks = LoadedData["mEngineTicks"];
             mRecordedPlatform = LoadedData["mPlatform"];
 
-            mParams.FromJson(LoadedData["mParams"]);
+            mParams->FromJson(LoadedData["mParams"]);
             for (auto& Event : LoadedData["mEvents"]) {
                 uint32 Ticks = Event["1"];
 
@@ -380,7 +332,7 @@ void sGameData::Clear() {
 	mScore_Kills_Home = 0;
 
 	Soldier_Clear();
-	mSoldiers_Died.clear();
+	mHeroes.clear();
 }
 
 void sGameData::Soldier_Clear() {
@@ -443,11 +395,11 @@ void sGameData::Soldier_Died(const sMission_Troop* pTroop) {
     if (!pTroop)
         return;
 
-    mSoldiers_Died.push_back(sHero(pTroop));
+    mHeroes.push_back(sHero(pTroop));
 }
 
 std::vector<sHero> sGameData::Heroes_Get() const {
-    std::vector<sHero> Final = mSoldiers_Died;
+    std::vector<sHero> Final = mHeroes;
 
 	sort(Final.begin(), Final.end(),
 		[](const sHero & a, const sHero & b) -> bool
@@ -479,7 +431,7 @@ bool sGameData::Phase_Start() {
     if (!mMission_Current)
         return false;
 
-    mPhase_Current = mMission_Current->GetPhase(mMission_Phase);
+    mPhase_Current = mMission_Current->PhaseGet(mMission_Phase);
     if (!mPhase_Current)
         return false;
 
@@ -496,7 +448,7 @@ bool sGameData::Phase_Start() {
     mMission_Recruitment = -1;
 
     mGamePhase_Data.mSoldiers_Prepare_SetFromSpritePtrs = false;
-    mGamePhase_Data.mTroops_DiedCount = mSoldiers_Died.size();
+    mGamePhase_Data.mHeroesCount = mHeroes.size();
     return true;
 }
 
@@ -519,7 +471,7 @@ bool sGameData::Phase_Next() {
     ++mMission_Phase;
     --mMission_Phases_Remaining;
 
-    mPhase_Current = mMission_Current->GetPhase(mMission_Phase);
+    mPhase_Current = mMission_Current->PhaseGet(mMission_Phase);
 
     // Still got phases to complete?
     if (mMission_Phases_Remaining)
@@ -538,7 +490,7 @@ bool sGameData::Phase_Next() {
 
     mMission_Phases_Remaining = (int16) mMission_Current->NumberOfPhases();
 
-    mPhase_Current = mMission_Current->GetPhase(mMission_Phase);
+    mPhase_Current = mMission_Current->PhaseGet(mMission_Phase);
     if (!mPhase_Current)
         return false;
 
@@ -548,7 +500,7 @@ bool sGameData::Phase_Next() {
     mMission_Recruitment = -1;
 
     mGamePhase_Data.mSoldiers_Prepare_SetFromSpritePtrs = false;
-    mGamePhase_Data.mTroops_DiedCount = mSoldiers_Died.size();
+    mGamePhase_Data.mHeroesCount = mHeroes.size();
     return true;
 }
 
@@ -596,7 +548,7 @@ std::string sGameData::ToJson(const std::string& pSaveName) {
 		Save["mMission_Troops"].push_back(Troop);
 	}
 
-	for (auto& Hero : mSoldiers_Died) {
+	for (auto& Hero : mHeroes) {
 		Json JsonHero;
 
 		JsonHero["mRecruitID"] = Hero.mRecruitID;
@@ -669,7 +621,7 @@ bool sGameData::FromJson(const std::string& pJson) {
                  Heroes.mRank = Hero["mRank"];
                  Heroes.mKills = Hero["mKills"];
 
-                 mSoldiers_Died.push_back(Heroes);
+                 mHeroes.push_back(Heroes);
              }
 
              mScore_Kills_Away = LoadedData["mTroops_Away"];
@@ -684,7 +636,7 @@ bool sGameData::FromJson(const std::string& pJson) {
 
     mMission_Current = mCampaign.getMission(mMission_Number);
     if (mMission_Current) {
-        mPhase_Current = mMission_Current->GetPhase(0);
+        mPhase_Current = mMission_Current->PhaseGet(0);
         mMission_Phases_Remaining = (int16)mMission_Current->NumberOfPhases();
     }
 	return true;

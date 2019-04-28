@@ -43,9 +43,8 @@ class cGraphics_PC : public cGraphics {
 	tSharedBuffer		mMission_Intro_Gfx_Clouds3;
 	tSharedBuffer		mMission_Intro_Gfx_TreesMain;
 
-	uint16          word_42859;
-	uint16          word_4285B;
-	int16           word_4285F;
+	uint16          mMission_Intro_DrawX;
+	uint16          mMission_Intro_DrawY;
 
 	public:
 	virtual				~cGraphics_PC();
@@ -59,7 +58,7 @@ class cGraphics_PC : public cGraphics {
 	virtual void		Load_Hill_Data();
 	virtual void		Load_Service_Data();
 
-	virtual void		Load_And_Draw_Image( const std::string &pFilename, unsigned int pColors, unsigned int pBackColor);
+	virtual void		Load_And_Draw_Image( const std::string &pFilename, unsigned int pColors, size_t pBackColor);
 	virtual sImage		Decode_Image(const std::string& pFilename, const size_t pCount, const size_t pPaletteOffset, const size_t pStartIndex);
 
 	virtual void		Map_Load_Resources();
@@ -75,8 +74,8 @@ class cGraphics_PC : public cGraphics {
 	uint8				Video_Get_Pixel(uint8* pSi, int16 pX, int16 pY);
 	void				Video_Put_Pixel(uint8* pDi, uint8 pAl);
 
-	virtual void		Video_Draw_16();
-	virtual void		Video_Draw_8(cSurface *pTarget = 0);
+	virtual void		Video_Draw_16(const uint8* RowPallete = 0);
+	virtual void		Video_Draw_8(cSurface *pTarget = 0, const uint8* RowPallete = 0);
 
 	virtual void		Sidebar_Copy_To_Surface( int16 pStartY );
 	virtual void		Sidebar_Copy_Sprite_To_ScreenBufPtr( int16 pSpriteType, size_t pX, size_t pY );
@@ -86,10 +85,10 @@ class cGraphics_PC : public cGraphics {
 	
 	virtual bool		Sprite_OnScreen_Check();
 
-	virtual void		Mission_Intro_Load_Resources();
-	virtual void		Mission_Intro_DrawHelicopter( uint16 pID );
+	virtual void		Mission_Intro_Load_Resources(const eTileTypes pTileset);
+	virtual void		Mission_Intro_DrawHelicopter( uint16 );
 
-	virtual void		Mission_Intro_Play( const bool pShowHelicopter );
+	virtual void		Mission_Intro_Play( const bool pShowHelicopter,const eTileTypes pTileset);
 	void				Mission_Intro( const std::vector<cPosition>& pPositions, const bool pShowHelicopter );
 
 	void				Mission_Intro_Render_2(tSharedBuffer pDs, int16 pCx);

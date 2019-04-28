@@ -32,6 +32,10 @@ cSurface::cSurface( size_t pWidth, size_t pHeight ) {
 	mSDLSurface = SDL_CreateRGBSurface( 0, (int) pWidth, (int) pHeight, 32, 0xFF << 16, 0xFF << 8, 0xFF, 0 );
 	mTexture = 0;
 
+	if (!mSDLSurface) {
+		g_Debugger->Error("SDLSurface not initialised");
+		exit(1);
+	}
     if (g_Window->GetRenderer()) {
         mTexture = SDL_CreateTexture(g_Window->GetRenderer(), SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, (int)pWidth, (int)pHeight);
 
@@ -45,6 +49,10 @@ cSurface::cSurface( size_t pWidth, size_t pHeight ) {
 	
 	clearBuffer();
 	clearSDLSurface();
+}
+
+cSurface::cSurface(const cDimension& pDimension) : cSurface(pDimension.mWidth, pDimension.mHeight) {
+
 }
 
 cSurface::~cSurface() {
@@ -64,7 +72,7 @@ void cSurface::clearSDLSurface( uint32 pColor ) {
 
 void cSurface::palette_SetToBlack() {
 
-	for(int16 ColorID = 0; ColorID < g_MaxColors; ColorID++) {
+	for(size_t ColorID = 0; ColorID < g_MaxColors; ColorID++) {
 		
 		// Get the next color values
 		mPalette[ColorID].mRed = 0;
@@ -77,13 +85,13 @@ void cSurface::palette_SetToBlack() {
 
 void cSurface::palette_SetFromNew() {
 
-	for (int cx = 0x0; cx < g_MaxColors; ++cx)
+	for (size_t cx = 0; cx < g_MaxColors; ++cx)
 		mPalette[cx] = mPaletteNew[cx];
 }
 
 void cSurface::paletteNew_SetToBlack() {
 
-	for (int cx = 0; cx < g_MaxColors; ++cx) {
+	for (size_t cx = 0; cx < g_MaxColors; ++cx) {
 		mPaletteNew[cx].mBlue = 0;
 		mPaletteNew[cx].mRed = 0;
 		mPaletteNew[cx].mGreen = 0;
@@ -123,7 +131,7 @@ bool cSurface::palette_FadeTowardNew() {
 	mPaletteAdjusting = false;
 
 	// Loop each color 
-	for( int cx = 0x0; cx < g_MaxColors; ++cx ) {
+	for(size_t cx = 0; cx < g_MaxColors; ++cx ) {
 
 		// Each component of the current color
 		for( int i = 0; i < 3; ++i ) {
@@ -168,7 +176,7 @@ bool cSurface::palette_FadeTowardNew() {
  */
 void cSurface::surfaceSetToPalette() {
 
-	for( int cx = 0; cx < g_MaxColors; ++cx )
+	for(size_t cx = 0; cx < g_MaxColors; ++cx )
 		paletteSDLColorSet( cx, &mPalette[cx] );
 }
 
@@ -177,7 +185,7 @@ void cSurface::surfaceSetToPalette() {
  */
 void cSurface::surfaceSetToPaletteNew() {
 
-	for( int cx = 0; cx < g_MaxColors; ++cx )
+	for(size_t cx = 0; cx < g_MaxColors; ++cx )
 		paletteSDLColorSet( cx, &mPaletteNew[cx] );
 }
 
@@ -267,12 +275,10 @@ void cSurface::mergeSurfaceBuffer( const cSurface* pFrom ) {
         SDL_UpdateTexture(mTexture, NULL, mSDLSurface->pixels, mSDLSurface->pitch);
 }
 
-void cSurface::clearBuffer(uint8 pColor) {
+void cSurface::clearBuffer(size_t pColor) {
 
-	for (size_t i = 0; i < mSurfaceBufferSize; ++i) {
-		mSurfaceBuffer[i] = pColor;
-		mSurfaceBufferSaved[i] = pColor;
-	}
+	memset(mSurfaceBuffer, (int) pColor, mSurfaceBufferSize);
+	memset(mSurfaceBufferSaved, (int) pColor, mSurfaceBufferSize);
 
 	clearSDLSurface();
 }
