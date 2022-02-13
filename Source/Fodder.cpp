@@ -1728,19 +1728,9 @@ bool cFodder::Campaign_Load(std::string pName) {
 }
 
 void cFodder::Map_Create(sMapParams pParams) {
-    uint8 TileID = (pParams.mTileType == eTileTypes_Int) ? 4
-                 : (pParams.mTileType == eTileTypes_AFX) ? 20
-                 : 16;
 
     if (mVersionCurrent->isAmigaPower())
 		pParams.mTileSub = eTileSub_1;
-
-    // In OF, this will only ever get called from the campaign selection screen,
-    // so we pick a tile thats easy to read text on
-#ifndef _OFED
-    if (mVersionCurrent->isAmigaXmas())
-        TileID = 100;
-#endif
 
 	mMapLoaded = std::make_shared<cRandomMap>(pParams);
 	
@@ -1755,18 +1745,6 @@ void cFodder::Map_Create(sMapParams pParams) {
 
     // Load the map specific resources
     Map_Load_Resources();
-
-#ifdef _OFED
-    // Editor needs to render the surface now
-    // Draw the tiles
-    MapTiles_Draw();
-
-    Mission_Sprites_Handle();
-
-    // Refresh the palette
-    mGraphics->PaletteSet(mSurface);
-    mSurface->surfaceSetToPaletteNew();
-#endif
 
 }
 
@@ -8464,7 +8442,7 @@ int16 cFodder::Sprite_Find_In_Region(sSprite* pSprite, sSprite*& pData24, int16 
 
     pData24 = mSprites.data();
 
-    for (int32 Data1C = mParams->mSpritesMax - 2; Data1C >= 0; --Data1C, ++pData24) {
+    for (int32 Data1C = mParams->getSpritesMax() - 2; Data1C >= 0; --Data1C, ++pData24) {
         int16 Data4 = pData24->field_18;
 
         if (!mSprite_Can_Be_RunOver[Data4])
@@ -8997,6 +8975,7 @@ void cFodder::Game_Save() {
         outfile.close();
     }
 
+	g_ResourceMan->refresh();
     mMouse_Exit_Loop = false;
 }
 
@@ -9852,7 +9831,7 @@ void cFodder::Sprite_Frame_Modifier_Update() {
 void cFodder::Sprite_Handle_Loop() {
     sSprite* Data20 = mSprites.data();
 
-    for (int32 Data1C = mParams->mSpritesMax - 2; Data1C > 0; --Data1C, ++Data20) {
+    for (int32 Data1C = mParams->getSpritesMax() - 2; Data1C > 0; --Data1C, ++Data20) {
 
         if (Data20->field_0 == -32768)
             continue;
@@ -10030,9 +10009,7 @@ void cFodder::Sprite_Handle_Player(sSprite *pSprite) {
                 if (mSquad_CurrentWeapon[pSprite->field_32] == eWeapon_Rocket) {
                     mTroop_Weapon_Grenade_Disabled = true;
                     mTroop_Weapon_Bullet_Disabled = true;
-
-                }
-                else {
+                } else {
                     if (mSquad_CurrentWeapon[pSprite->field_32] == eWeapon_Grenade) {
                         mTroop_Weapon_Rocket_Disabled = true;
                         mTroop_Weapon_Bullet_Disabled = true;
@@ -16274,7 +16251,7 @@ void cFodder::SetActiveSpriteSheetPtr(const sSpriteSheet** pSpriteSheet) {
 void cFodder::intro_Retail() {
 
     // Disabled: GOG CD Version doesn't require a manual check
-    //  CopyProtection();
+    CopyProtection();
     mGraphics->Load_Sprite_Font();
 
 	mSound->Music_Play(CANNON_BASED(16, 20));
@@ -16963,7 +16940,7 @@ int16 cFodder::Sprite_Get_Free_Max42(int16& pData0, sSprite*& pData2C, sSprite*&
             pData2C = mSprites.data();
 
             // Loop all sprites
-             for (int32_t Data1C = mParams->mSpritesMax - 5; Data1C >= 0; --Data1C, ++pData2C) {
+             for (int32_t Data1C = mParams->getSpritesMax() - 5; Data1C >= 0; --Data1C, ++pData2C) {
 
                 // Sprite free?
                 if (pData2C->field_0 != -32768)
@@ -16988,7 +16965,7 @@ int16 cFodder::Sprite_Get_Free_Max42(int16& pData0, sSprite*& pData2C, sSprite*&
             pData2C = mSprites.data();
 
             // Loop all sprites
-             for (int32_t Data1C = mParams->mSpritesMax - 4; Data1C >= 0; --Data1C, ++pData2C) {
+             for (int32_t Data1C = mParams->getSpritesMax() - 4; Data1C >= 0; --Data1C, ++pData2C) {
 
                 // Sprite free?
                 if (pData2C->field_0 != -32768)
@@ -17007,9 +16984,9 @@ int16 cFodder::Sprite_Get_Free_Max42(int16& pData0, sSprite*& pData2C, sSprite*&
         }
         else {
             // Only looking for 1 sprite
-            pData2C = &mSprites[mParams->mSpritesMax - 3];
+            pData2C = &mSprites[mParams->getSpritesMax() - 3];
 
-            for (int32 Data1C = mParams->mSpritesMax - 3; Data1C >= 0; --Data1C) {
+            for (int32 Data1C = mParams->getSpritesMax() - 3; Data1C >= 0; --Data1C) {
 
                 // Free?
                 if (pData2C->field_0 == -32768) {
@@ -17038,8 +17015,8 @@ int16 cFodder::Sprite_Get_Free_Max29(int16& pData0, sSprite*& pData2C, sSprite*&
     if (pData0 == 2)
         goto loc_21B91;
 
-    pData2C = &mSprites[mParams->mSpritesMax - 16];
-     for (int32_t Data1C = mParams->mSpritesMax - 16; Data1C >= 0; --Data1C, --pData2C) {
+    pData2C = &mSprites[mParams->getSpritesMax() - 16];
+     for (int32_t Data1C = mParams->getSpritesMax() - 16; Data1C >= 0; --Data1C, --pData2C) {
 
         if (pData2C->field_0 == -32768) {
             pData2C->Clear();
@@ -17058,7 +17035,7 @@ loc_21B4B:;
 loc_21B91:;
     pData2C = mSprites.data();
 
-     for (int32_t Data1C = mParams->mSpritesMax - 17; Data1C >= 0; --Data1C, ++pData2C) {
+     for (int32_t Data1C = mParams->getSpritesMax() - 17; Data1C >= 0; --Data1C, ++pData2C) {
 
         if (pData2C->field_0 != -32768)
             continue;
@@ -18280,7 +18257,7 @@ void cFodder::About() {
     g_Fodder->mPhase_Aborted = false;
 }
 
-void cFodder::CreateRandom() {
+void cFodder::CreateRandom(sMapParams pParams) {
 	mGame_Data.mCampaign.CreateCustomCampaign();
 	mGame_Data.mCampaign.setRandom(true);
 	mGame_Data.mCampaign.setName("Random");
@@ -18291,9 +18268,7 @@ void cFodder::CreateRandom() {
 		mParams->mRandomFilename = "random";
 	}
 
-	sMapParams Params(mRandom.get());
-
-	Map_Create(Params);
+	Map_Create(pParams);
 
 	if (mParams->mScriptRun.size() == 0)
 		mParams->mScriptRun = "test.js";
@@ -18349,6 +18324,7 @@ void cFodder::Start() {
 
     Start:;
     mGame_Data.mCampaign.Clear();
+	mSound = 0;
     mVersionDefault = 0;
     mVersionCurrent = 0;
     VersionSwitch(mVersions->GetRetail( mParams->mDefaultPlatform, mParams->mDefaultGame ));
@@ -18832,7 +18808,7 @@ void cFodder::Mission_Final_TimeToDie() {
         mSidebar_Screen_Buffer[Y] = 0;
     }
 
-    mGUI_Sidebar_TroopList_Name_BreakOnSpace = 0x0F;
+    mGUI_Sidebar_TroopList_Name_BreakOnSpace = 11;
 
     GUI_Sidebar_TroopList_Name_Draw(0, 0, 0xB7, "TIME TO DIE ");
 
