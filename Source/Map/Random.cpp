@@ -2,7 +2,7 @@
  *  Open Fodder
  *  ---------------
  *
- *  Copyright (C) 2008-2018 Open Fodder
+ *  Copyright (C) 2008-2024 Open Fodder
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,8 @@
 
 cRandomMap::cRandomMap(const sMapParams& pParams) : cOriginalMap() {
 	mParams = pParams;
-
+	mPathSearchUnitType = 0;
+	mPathTilesNotTouchable = 0;
 	mData = std::make_shared<std::vector<uint8_t>>();
 	ClearTiles(0);
 
@@ -347,15 +348,15 @@ int cRandomMap::Passable(int nx, int ny)
 			break;
 
 		case eSprite_Helicopter_Grenade_Enemy:
-		case eSprite_Helicopter_Grenade2_Enemy:
+		case eSprite_Helicopter_Unarmed_Enemy:
 		case eSprite_Helicopter_Missile_Enemy:
 		case eSprite_Helicopter_Homing_Enemy:
-		case eSprite_Helicopter_Grenade2_Human:
 		case eSprite_Helicopter_Grenade_Human:
+		case eSprite_Helicopter_Unarmed_Human:
 		case eSprite_Helicopter_Missile_Human:
 		case eSprite_Helicopter_Homing_Human:
-		case eSprite_Helicopter_Grenade2_Human_Called:
 		case eSprite_Helicopter_Grenade_Human_Called:
+		case eSprite_Helicopter_Unarmed_Human_Called:
 		case eSprite_Helicopter_Missile_Human_Called:
 		case eSprite_Helicopter_Homing_Human_Called:
 		case eSprite_Helicopter_Homing_Enemy2:

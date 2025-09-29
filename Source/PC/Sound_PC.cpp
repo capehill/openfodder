@@ -2,7 +2,7 @@
  *  Open Fodder
  *  ---------------
  *
- *  Copyright (C) 2008-2018 Open Fodder
+ *  Copyright (C) 2008-2024 Open Fodder
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -120,7 +120,7 @@ void cSound_PC::MixerChannelFinished( int32 pChannel ) {
 	}
 }
 
-void cSound_PC::Sound_Play( int16 pTileset, int16 pSoundEffect, int16 pVolume ) {
+void cSound_PC::Sound_Play( int16 pTileset, int16 pSoundEffect, int16 pVolume, int16 pIndex) {
 	sChunkPlaying Playing;
 	auto eax = word_42316[pTileset][pSoundEffect];
 	if (!eax || !eax->size() || mSound == false )
@@ -159,15 +159,21 @@ void cSound_PC::Music_PlayFile( const std::string& pFilename ) {
 }
 
 void cSound_PC::Music_Stop() {
-	
+	mPlayingTrack = -1;
+
 	if (mSound == false)
 		return;
 
 	Mix_FadeOutMusic(500);
 }
 
-void cSound_PC::Music_Play( int16 pTrack ) {
+void cSound_PC::Music_Play( int16 pTrack, int16 pSong) {
 	
+	if (mPlayingTrack == pTrack)
+		return;
+
+	mPlayingTrack = pTrack;
+
 	static std::string Tracks[] = {
 		"rjp.JON(1)",
 		"rjp.JON(2)",

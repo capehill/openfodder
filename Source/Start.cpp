@@ -2,7 +2,7 @@
  *  Open Fodder
  *  ---------------
  *
- *  Copyright (C) 2008-2018 Open Fodder
+ *  Copyright (C) 2008-2024 Open Fodder
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
  */
 
 #include "stdafx.hpp"
+#include <thread>
 
 #ifndef _OFED
 #ifndef _OFBOT
@@ -38,10 +39,12 @@ int start(int argc, char *argv[]) {
 		return 0;
 
 	g_Fodder->Prepare(Params);
-
+	std::thread myThread(&cFodder::Interrupt_Sim, g_Fodder);
+	int result = 0;
+	
 	if (g_Fodder->mStartParams->mUnitTesting) {
 		cUnitTesting Testing;
-		return Testing.Start() ? 0 : -1;
+		result = Testing.Start() ? 0 : -1;
 	}
 	else if (g_Fodder->mStartParams->mRandomSave) {
 		sMapParams Params(g_Fodder->mRandom.get());
@@ -52,7 +55,11 @@ int start(int argc, char *argv[]) {
 		g_Fodder->mGame_Data.mDemoRecorded.save();
 	}
 
-	return 0;
+	{
+		g_Fodder->mExit = true;
+		myThread.join();
+	}
+	return result;
 }
 
 // Debug stuff

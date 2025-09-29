@@ -77,10 +77,10 @@ Section "Copy Files" drcreepInst
   File ".\packages\VC_redist.x86.exe"
   File "..\..\COPYING*"
   File "..\..\Readme.md"
-  File "..\VS2017\Release\OpenFodder.exe"
-  File "..\VS2017\Release\SDL2.dll"
-  File "..\VS2017\Release\SDL2_mixer.dll"
-  File "..\VS2017\Release\libmodplug-1.dll"
+  File "..\VS2017\x86\Release\OpenFodder.exe"
+  File "..\VS2017\x86\Release\SDL2.dll"
+  File "..\VS2017\x86\Release\SDL2_mixer.dll"
+  File "..\VS2017\x86\Release\libmodplug-1.dll"
   
   Var /GLOBAL DataDest
   StrCpy $DataDest "$INSTDIR"
@@ -90,7 +90,7 @@ Section "Copy Files" drcreepInst
   CopyFilesLocal:
   
   SetOutPath "$DataDest"
-  File /r "..\..\Run\about.bmp"
+  File /r "..\..\Run\about.png"
   File /r "..\..\Run\Campaigns"
   File /r "..\..\Run\Data"
   File /r "..\..\Run\Saves"
@@ -115,7 +115,7 @@ Section "Copy Files" drcreepInst
 
 	CreateShortCut "$DESKTOP\OpenFodder.lnk" "$INSTDIR\OpenFodder.exe"
 
-	MessageBox MB_YESNO|MB_ICONQUESTION "Install Microsoft Visual C++ 2017 64bit Redistributable Package?" IDNO NoRunVC
+	MessageBox MB_YESNO|MB_ICONQUESTION "Install Microsoft Visual C++ 2015-2022 32bit Redistributable Package?" IDNO NoRunVC
     Exec "$INSTDIR\VC_redist.x86.exe"
   NoRunVC:
   

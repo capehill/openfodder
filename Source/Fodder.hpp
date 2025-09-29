@@ -2,7 +2,7 @@
  *  Open Fodder
  *  ---------------
  *
- *  Copyright (C) 2008-2018 Open Fodder
+ *  Copyright (C) 2008-2024 Open Fodder
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -78,7 +78,7 @@ struct sService_Draw {
 };
 
 extern const sSpriteSheet_pstuff mSpriteSheet_PStuff[209];
-extern const int16 mMap_Direction_Calculations[256];
+extern const int16 mDirectionVectorTable[256];
 extern const int8 mMap_Distance_Calculations[1025];
 extern const int16 mMap_DirectionsBetweenPoints[];
 
@@ -130,7 +130,12 @@ public:
     cSurface*       mSurfaceMapOverview;
     cSurface*       mSurface;
     cSurface*       mSurface2;
+    cSurface*       mSurfaceRecruit;
+    cSurface*       mSurfaceFinal;
     int32           mSurfaceMapTop, mSurfaceMapLeft;
+
+    std::mutex      mSurfaceMtx;
+    std::mutex      mSpriteMtx;
 
     uint8           mKeyCode;
 
@@ -141,14 +146,20 @@ public:
     tSharedBuffer   mTile_SubBlk;
 
     bool            mInput_Enabled;
-    uint16          mGame_InputTicks;
+
+    uint16          mPhase_InterruptTicks;
+    volatile bool   mVideo_Ticked;
+    volatile bool   mVideo_Done;
+
+    int16           mInterruptTick;
+
+    std::function<void()> mInterruptCallback;
+
+    volatile bool   mExit;
 
     int16           mButtonPressLeft, mButtonPressRight;
 
     bool            mVehicle_Input_Disabled;
-
-
-
 
 
     int16           mMouse_Button_Left_Toggle;
@@ -158,9 +169,12 @@ public:
 
     int16           mMouse_Exit_Loop;
     cPosition       mMouse_EventLastPosition;
+    cPosition       mMouse_EventLastPositionRelative;
     uint32          mMouse_EventLastButtonsPressed;
     cPosition       mMouse_EventLastWheel;
     bool            mMouse_Locked;
+    int16           mMouse_LeftWindow;
+    bool            mWindow_Focus;
 
     bool            mSquad_Member_Fire_CoolDown_Override;
 
@@ -180,6 +194,17 @@ public:
 
     int32           mMapTile_TargetX;
     int32           mMapTile_TargetY;
+
+    bool            mMapTile_Music_Play;
+    
+    int16           mMusicTrack_unk;
+    int16           mMusic_CurrentTrack;
+    int16           mMusic_TargetVolume;
+    int16           mMusic_SlowVolumeDecrease;
+    
+    int16           word_82176;
+    int16           word_82178;
+    int16           word_829F6;
 
     int16           mCamera_Panning_ToTarget;
     int32           mCamera_AccelerationX;
@@ -252,13 +277,13 @@ public:
 
     bool            mPhase_Complete;
     int16           mPhase_Completed_Timer;
-    bool            mPhase_In_Progress;
+    volatile bool   mPhase_In_Progress;
     bool            mPhase_Paused;
     bool            mPhase_TryAgain;
     bool            mPhase_TryingAgain;
 
 	bool            mPhase_Finished;
-	int16           mPhase_ShowMapOverview;
+	volatile int16  mPhase_ShowMapOverview;
 
     int16           mEnemy_BuildingCount;
     int16           mSquad_SwitchWeapon;
@@ -359,6 +384,8 @@ public:
     sSprite*        mSquad_CurrentVehicles[3];
     sSprite*        mSquad_CurrentVehicle;
 
+    std::vector<sTileTrack> mMapTileTracks;
+
     bool           mSprite_HumanVehicles_Found;
     std::vector<sSprite*>        mSprites_HumanVehicles;
     int16           dword_3B24B;
@@ -392,6 +419,9 @@ public:
     int16           mIntro_PlayTextDuration;
     int16           mSoundEffectToPlay_Set;
     int16           mSoundEffectToPlay;
+
+    int16           mSound_Priority[4];
+    int16           mSound_Timer[6];
 
     int16           mSquad_EnteredVehicleTimer[3];
     sSprite*        mSprite_OpenCloseDoor_Ptr;
@@ -443,19 +473,21 @@ public:
     int16               mRecruit_Truck_Reached;
     int16               mRecruit_Render_Name_SmallGap;
 
-    int16           mMouseX;
-    int16           mMouseY;
+    volatile int16           mMouseX;
+    volatile int16           mMouseY;
     int16           mMouseX_Offset;
     int16           mMouseY_Offset;
 
     int32           mCameraX;
     int32           mCameraY;
 
-    int16           mMouseCursor_Enabled;
+    volatile int16  mMouseCursor_Enabled;
 
     int16           mMouseSpriteNew;
     int16           mMouseSetToCursor;
     int16           mMouseDisabled;
+
+    int16           mPaletteLevel;
 
     uint16          mSquad_Grenade_SplitMode;
     uint16          mSquad_Rocket_SplitMode;
@@ -510,20 +542,22 @@ public:
     size_t          mDraw_Dest_SkipPixelsPerRow;
     uint16          mVideo_Draw_ColumnsMax;
 
+    int32           mBriefingHelicopter_ScreenX;
+    int32           mBriefingHelicopter_ScreenY;
+    int16           mBriefingHelicopter_DirectionIndex;
+    float           mBriefingHelicopter_Speed;
+    int16          word_428BA;
 
-    int16           word_428B6;
-    int16           word_428B8;
-    uint16          word_428BA;
-
-    uint32          mHelicopterPosX;
-    uint32          mHelicopterPosY;
-    int16           mBriefing_Helicopter_Off1;
-    int16           mBriefing_Helicopter_Off2;
-    int16           mBriefing_Helicopter_Off3;
-    const int16*    mBriefing_Helicopter_Off4;
-    uint16          mBriefing_ParaHeli_Frame;
-    int16           mBriefing_Helicopter_Moving;
-    int16           word_428D8;
+    float          mHelicopterPosX;
+    float          mHelicopterPosY;
+    int16           mBriefingHelicopter_TargetDirection;
+    float           mBriefingHelicopter_TargetSpeed;
+    float           mBriefingHelicopter_NextUpdateCountdown;
+    int16           mHelicopterOffsetIndex;
+    uint16          mBriefingHelicopter_FrameCounter;
+    int16           mBriefingHelicopter_Moving;
+    int16           mBriefingHelicopter_NotDone;
+    float             mBriefingHelicopter_TimeScale;
 
     int16           mMouseButtonStatus;
     int16           mInputMouseX;
@@ -571,8 +605,12 @@ public:
 	virtual int16	Phase_Cycle();
     virtual int16   Phase_Loop();
 	void			Phase_Prepare();
+    void            Phase_Paused();
 
-    void            Game_Handle();
+    void            Interrupt_Sim();
+    void            Interrupt_Redraw();
+
+    void            Phase_Loop_Interrupt();
     void            Camera_Handle();
     void            Camera_PanTarget_AdjustToward_SquadLeader();
 
@@ -595,6 +633,10 @@ public:
     void            Map_Load_Sprites();
     void			Map_Load_Sprites_Count();
     void            Map_Load_Resources();
+    void            Map_Load_TileTracks();
+
+    void            Music_Check_MapTile_TrackChange();
+    void            Music_Fade_SwitchTrack();
 
     void			Map_Add_Structure(const sStructure& pStructure, int16 pTileX, int16 pTileY);
 
@@ -602,7 +644,12 @@ public:
     int16			Tile_FindType(const eTerrainFeature pType);
     std::vector<int16> Tile_FindType(const eTerrainFeature pType, const eTerrainFeature pType2);
 
-    void            Music_Play_Tileset();
+    void		    Music_Play(int16 pTrack, int16 pSong = -1);
+    void            Music_Play_Tileset(int16_t pSong = -1);
+    void            Music_setup_track_unk(int16_t d0, int16_t d1);
+    void            Music_Increase_Channel_Volume();
+    bool            Music_Decrease_Channel_Volume();
+    void            Music_SetFullVolume();
 
     // Mission Functions
     void            Phase_Soldiers_Count();
@@ -644,7 +691,7 @@ public:
     void            Mission_Sprites_Handle();
 
     void            Phase_GameOver();
-    void            Phase_Paused();
+    void            Draw_Phase_Paused();
 
     void            Phase_Show_Complete();
     void            Phase_Show_TryAgain();
@@ -674,9 +721,10 @@ public:
     void            Sprite_Draw_Frame(sSprite* pDi, int16 pSpriteType, int16 pFrame, cSurface *pDestination = 0);
 
     bool            Sprite_OnScreen_Check();
-    void            Sprites_Draw();
+    void            Sprites_Draw(cSurface* pSurface = 0);
     void            Sprite_Map_Sound_Play(int16& pData0);
 
+    void            Sound_Tick();
     void            Sound_Play(sSprite* pSprite, int16 pSoundEffect, int16 pData8);
 
     // 14EAC
@@ -684,7 +732,7 @@ public:
     void            Mission_Intro_Helicopter_Start();
 	void            Mission_Intro_Draw_Mission_Name();
 
-    void            sub_1594F();
+    void            Briefing_Helicopter_Check();
 
     void            CopyProtection();
     void            CopyProtection_EncodeInput();
@@ -706,12 +754,13 @@ public:
     void            Recruit_Update_Actors();
     void            sub_175C0();
     void            Recruit_Update_Soldiers();
+    void            Recruit_Draw_Soldiers();
+
     void            Recruit_Prepare_Anims();
     void            Recruit_Frame_Check();
     void            Recruit_Position_Troops();
     void            Recruit_Update_Truck();
     void            Recruit_Copy_Sprites();
-    void            Recruit_Cycle();
     void            Recruit_Draw_Graves();
     void            Recruit_Draw_Grave(int16 pSpriteType, const size_t pPosX, const size_t pPosY);
     bool            Recruit_Check_Buttons_SaveLoad();
@@ -740,6 +789,10 @@ public:
 
 
 	void            Briefing_Update_Helicopter();
+    
+    std::string     Briefing_Get_Mission_Title();
+    std::string     Briefing_Get_Phase_Name();
+
 	void            Briefing_Draw_Mission_Title(int16 pDrawAtY);
 
     void            Briefing_Draw_Phase();
@@ -802,23 +855,23 @@ public:
 
     void            Sprite_Handle_Helicopter_Grenade_Enemy(sSprite* pSprite);             // 40
     void            Sprite_Handle_Flashing_Light(sSprite* pSprite);                       // 41
-    void            Sprite_Handle_Helicopter_Grenade2_Enemy(sSprite* pSprite);            // 42
+    void            Sprite_Handle_Helicopter_Unarmed_Enemy(sSprite* pSprite);             // 42
     void            Sprite_Handle_Helicopter_Missile_Enemy(sSprite* pSprite);             // 43
     void            Sprite_Handle_Helicopter_Homing_Enemy(sSprite* pSprite);              // 44
     void            Sprite_Handle_Missile(sSprite* pSprite);                              // 45
     void            Sprite_Handle_MissileHoming(sSprite* pSprite);                        // 46
-    void            Sprite_Handle_Sparks(sSprite* pSprite);                                           // 47
-    void            Sprite_Handle_FireTrail(sSprite* pSprite);                                            // 48
-    void            Sprite_Handle_Helicopter_Grenade2_Human(sSprite* pSprite);            // 49
+    void            Sprite_Handle_Sparks(sSprite* pSprite);                               // 47
+    void            Sprite_Handle_FireTrail(sSprite* pSprite);                            // 48
+    void            Sprite_Handle_Helicopter_Grenade_Human(sSprite* pSprite);             // 49
 
-    void            Sprite_Handle_Helicopter_Grenade_Human(sSprite* pSprite);             // 50
+    void            Sprite_Handle_Helicopter_Unarmed_Human(sSprite* pSprite);             // 50
     void            Sprite_Handle_Helicopter_Missile_Human(sSprite* pSprite);             // 51
     void            Sprite_Handle_Helicopter_Homing_Human(sSprite* pSprite);              // 52
     void            Sprite_Handle_Helicopter_PropCrash(sSprite* pSprite);                 // 53
     void            Sprite_Handle_Mine(sSprite* pSprite);                                 // 54
     void            Sprite_Handle_Mine2(sSprite* pSprite);                                // 55
     void            Sprite_Handle_Spike(sSprite* pSprite);                                // 56
-    void            Sprite_Handle_Smoke(sSprite* pSprite);                                            // 57
+    void            Sprite_Handle_Smoke(sSprite* pSprite);                                // 57
     void            Sprite_Handle_Text_Try(sSprite* pSprite);                             // 58
     void            Sprite_Handle_Text_Again(sSprite* pSprite);                           // 59
 
@@ -867,8 +920,8 @@ public:
     void            Sprite_Handle_Helicopter_CallPad(sSprite* pSprite);               // 99
 
     void            Sprite_Handle_BuildingDoor_Reinforced(sSprite* pSprite);                                      // 100
-    void            Sprite_Handle_Helicopter_Grenade2_Human_Called(sSprite* pSprite); // 101
-    void            Sprite_Handle_Helicopter_Grenade_Human_Called(sSprite* pSprite);  // 102
+    void            Sprite_Handle_Helicopter_Grenade_Human_Called(sSprite* pSprite); // 101
+    void            Sprite_Handle_Helicopter_Unarmed_Human_Called(sSprite* pSprite);  // 102
     void            Sprite_Handle_Helicopter_Missile_Human_Called(sSprite* pSprite);  // 103
     void            Sprite_Handle_Helicopter_Homing_Human_Called(sSprite* pSprite);   // 104
     void            Sprite_Handle_Turret_HomingMissile_Enemy(sSprite* pSprite);       // 105
@@ -906,9 +959,9 @@ public:
 
     void            Sprite_Handle_Player_Adjust_Movement_Speed(sSprite* pSprite);
     void            Sprite_Draw_Row_Update(sSprite* pSprite);
-    void            Sprite_Handle_Troop_FrameUnk(sSprite* pSprite);
-    void            sub_1FCF2(sSprite* pSprite);
-    void            sub_1FDE7(sSprite* pSprite);
+    void            Sprite_Handle_Troop_Animation(sSprite* pSprite);
+    void            Sprite_Handle_Troop_Speed(sSprite* pSprite);
+    void            Sprite_Handle_Troop_Direct_TowardWeaponTarget_WithRestore(sSprite* pSprite);
     void            Sprite_Create_Player_Shadow(sSprite* pSprite);
     int16           Sprite_Create_BloodTrail(sSprite* pSprite, sSprite*& pData2C, sSprite*& pData30);
     void            Sprite_Terrain_Check(sSprite* pSprite, int16& pData4);
@@ -1235,8 +1288,8 @@ public:
 
     void            WonGame();
 
-    void            Video_SurfaceRender( const bool pRestoreSurface = true );
-    void            Cycle_End();
+    void            Video_Sleep(cSurface* pSurface = 0, const bool pShrink = false, const bool pVsync = false);
+    void            Video_SurfaceRender( const bool pRestoreSurface = true, const bool pShrink = false, cSurface* pSurface = 0, const bool pSkip = true);
 
     void            sleepLoop(int64 pMilliseconds);
     int16           ShowImage_ForDuration(const std::string& pFilename, uint16 pDuration, size_t pBackColor = 0, bool pCanAbort = true);
@@ -1250,6 +1303,7 @@ public:
     virtual void    Mouse_Inputs_Get();
     void            Mouse_Inputs_Check();
     void            Mouse_Setup();
+    cPosition       Mouse_GetOnBorderPosition();
 
     void            eventProcess(const cEvent& pEvent);
     void            eventsProcess();

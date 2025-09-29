@@ -2,7 +2,7 @@
  *  Open Fodder
  *  ---------------
  *
- *  Copyright (C) 2008-2018 Open Fodder
+ *  Copyright (C) 2008-2024 Open Fodder
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -390,8 +390,8 @@ void cScriptingEngine::guiPrintString(const std::string& pText, const size_t pX,
 			g_Fodder->String_Print_Large(pText, pUnderline, pX, pY);
 	}
 
-	g_Fodder->Video_SurfaceRender(false);
-	g_Fodder->Cycle_End();
+	g_Fodder->mSurface->Save();
+	g_Fodder->Video_Sleep();
 	g_Fodder->mGraphics->SetActiveSpriteSheet(eGFX_IN_GAME);
 }
 
@@ -428,7 +428,7 @@ bool cScriptingEngine::scriptsLoadFolder(const std::string& pFolder) {
 		auto script = g_ResourceMan->FileReadStr(finalpath + scriptFile);
 		
 		if (!script.size() || (scriptRun(script, finalName) == false)) {
-			g_Debugger->Error(finalpath + scriptFile + " Failed to execute");
+			g_Debugger->Error(finalpath + scriptFile + " Failed to execute script:" + scriptFile);
 			return false;
 		}
 	}
@@ -471,7 +471,7 @@ bool cScriptingEngine::Run(const std::string& pScript) {
 	auto script = g_ResourceMan->FileReadStr(path);
 
 	if (!script.size() || (scriptRun(script, pScript) == false)) {
-		g_Debugger->Error(path + " Failed to execute");
+		g_Debugger->Error(path + " Failed to execute: " + pScript);
 		return false;
 	}
 

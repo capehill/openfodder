@@ -2,7 +2,7 @@
  *  Open Fodder
  *  ---------------
  *
- *  Copyright (C) 2008-2018 Open Fodder
+ *  Copyright (C) 2008-2024 Open Fodder
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 
 #include "stdafx.hpp"
 
-const int16 mMap_Direction_Calculations[256] = {
+const int16 mDirectionVectorTable[256] = {
 	0, 804, 1608, 2410, 3212, 4011, 4808, 5602, 6393, 7179,
 	7962, 8739, 9512, 10278, 11039, 11793, 12539, 13279, 14010, 14732,
 	15446, 16151, 16846, 17530, 18204, 18867, 19519, 20159, 20787, 21402,

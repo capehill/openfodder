@@ -2,7 +2,7 @@
  *  Open Fodder
  *  ---------------
  *
- *  Copyright (C) 2008-2018 Open Fodder
+ *  Copyright (C) 2008-2024 Open Fodder
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -58,16 +58,16 @@ enum eSprites {
 
 	eSprite_Helicopter_Grenade_Enemy			= 40,
 	eSprite_Flashing_Light						= 41,
-	eSprite_Helicopter_Grenade2_Enemy			= 42,
+	eSprite_Helicopter_Unarmed_Enemy			= 42,
 	eSprite_Helicopter_Missile_Enemy			= 43,
 	eSprite_Helicopter_Homing_Enemy				= 44,
 	eSprite_Missile								= 45,
 	eSprite_MissileHoming						= 46,
 	eSprite_Sparks								= 47,
 	eSprite_FireTrail							= 48,
-	eSprite_Helicopter_Grenade2_Human			= 49,
+	eSprite_Helicopter_Grenade_Human			= 49,
 
-	eSprite_Helicopter_Grenade_Human			= 50,
+	eSprite_Helicopter_Unarmed_Human			= 50,
 	eSprite_Helicopter_Missile_Human			= 51,
 	eSprite_Helicopter_Homing_Human				= 52,
 	eSprite_Helicopter_PropCrash				= 53,
@@ -123,8 +123,8 @@ enum eSprites {
 	eSprite_Helicopter_CallPad					= 99,
 
 	eSprite_BuildingDoor_Reinforced				= 100,
-	eSprite_Helicopter_Grenade2_Human_Called	= 101,
-	eSprite_Helicopter_Grenade_Human_Called		= 102,
+	eSprite_Helicopter_Grenade_Human_Called		= 101,
+	eSprite_Helicopter_Unarmed_Human_Called		= 102,
 	eSprite_Helicopter_Missile_Human_Called		= 103,
 	eSprite_Helicopter_Homing_Human_Called		= 104,
 	eSprite_Turret_HomingMissile_Enemy			= 105,
@@ -276,13 +276,13 @@ struct sSprite {
 	int8 field_4F;			// Player: -1 = In water
 	int16 field_50;
 	int16 field_52;			// Video: Number of rows not to draw
-	int8 field_54;			// Human: Fired Weapon
+	int8 field_54;			// Human: Fired Weapon (1 = Grenade, 2 = Bullet, 3 = Rocket)
 	int8 field_55;
 	int8 field_56;
 	int8 field_57;			// Human: Weapon Fired Cooldown
 	int8 field_58;          // Has Shadow
 	int8 field_59;
-	int8 field_5A;
+	int8 field_5A;			// Human: Turn towards enemy
 	int8 field_5B;			// Human: Is Sinking
 	int8 field_5C;			// 1 = Was Drawn
 
@@ -363,7 +363,7 @@ extern const int16 mSprite_Seal_Frames[];
 extern const int16 mSprite_Computer_Frames[];
 extern const int8 mSprite_Civilian_Sound_Death[];
 extern const int8 mSprite_Soldier_Unk[];
-extern const int16 mSprite_Direction_Frame_Unk[];
+extern const int16 mDirectionStepTable[];
 extern const int16* mSprite_AnimationPtrs[];
 extern const int16 mSprite_Speed_Direction_Modifier[];
 extern const std::vector<std::vector<int16>> mSoldier_Squad_Fire_RotationOrder;

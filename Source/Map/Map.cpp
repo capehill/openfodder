@@ -2,7 +2,7 @@
  *  Open Fodder
  *  ---------------
  *
- *  Copyright (C) 2008-2018 Open Fodder
+ *  Copyright (C) 2008-2024 Open Fodder
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -41,6 +41,7 @@ sMapParams::sMapParams(size_t pSeed) {
 
 cMap::cMap() {
 	mData = std::make_shared<std::vector<uint8_t>>();
+	mTile_Ptr = 0;
 }
 
 int32 cMap::Tile_Get(const size_t pTileX, const size_t pTileY) {
@@ -92,7 +93,7 @@ void cMap::Sprite_Add(size_t pSpriteID, size_t pSpriteX, size_t pSpriteY) {
 		break;
 
 	case eSprite_Helicopter_Grenade_Enemy:          // 3 Nulls
-	case eSprite_Helicopter_Grenade2_Enemy:
+	case eSprite_Helicopter_Unarmed_Enemy:
 	case eSprite_Helicopter_Missile_Enemy:
 	case eSprite_Helicopter_Homing_Enemy:
 	case eSprite_Helicopter_Homing_Enemy2:
@@ -103,12 +104,12 @@ void cMap::Sprite_Add(size_t pSpriteID, size_t pSpriteX, size_t pSpriteY) {
 		break;
 
 		// Fall Through
-	case eSprite_Helicopter_Grenade2_Human:         // 2 Nulls
-	case eSprite_Helicopter_Grenade_Human:
+	case eSprite_Helicopter_Grenade_Human:         // 2 Nulls
+	case eSprite_Helicopter_Unarmed_Human:
 	case eSprite_Helicopter_Missile_Human:
 	case eSprite_Helicopter_Homing_Human:
-	case eSprite_Helicopter_Grenade2_Human_Called:
 	case eSprite_Helicopter_Grenade_Human_Called:
+	case eSprite_Helicopter_Unarmed_Human_Called:
 	case eSprite_Helicopter_Missile_Human_Called:
 	case eSprite_Helicopter_Homing_Human_Called:
 	case eSprite_Tank_Enemy:

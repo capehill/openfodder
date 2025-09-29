@@ -2,7 +2,7 @@
  *  Open Fodder
  *  ---------------
  *
- *  Copyright (C) 2008-2018 Open Fodder
+ *  Copyright (C) 2008-2024 Open Fodder
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -36,20 +36,23 @@ const int16 MOUSE_POSITION_Y_ADJUST = 4;
 
 const int16 SIDEBAR_WIDTH = 48;
 
-const int16 mBriefing_Helicopter_Offsets[] =
+const int16 mBriefing_Helicopter_Offsets_Amiga[30] =
 {
-    0x0180, 0x0040, 0x0004, 0x01A0,
-    0x0040, 0x000F, 0x01C0, 0x0040,
-    0x0007, 0x01E0, 0x0020, 0x0007,
-    0x0000, 0x0010, 0x000A, 0x0080,
-    0x0010, 0x001E, 0x0100, 0x0010,
-    0x000A, 0x01A0, 0x0008, 0x0019,
-    0x0170, 0x0064, 0x000A, -1,
-    -1, -1
+  0x0180, 0x0020, 0x0005, 
+  0x01A0, 0x0020, 0x001E, 
+  0x01C0, 0x0020, 0x0014, 
+  0x01E0, 0x0010, 0x0014, 
+  0x0000, 0x0008, 0x0014,
+  0x0080, 0x0008, 0x003C, 
+  0x0100, 0x0008, 0x0014, 
+  0x01A0, 0x0004, 0x002E, 
+  0x0170, 0x0032, 0x0046,
+  -1, -1, -1
 };
 
 cFodder::cFodder(std::shared_ptr<cWindow> pWindow) {
 
+    mExit = false;
     mVersions = std::make_shared<cVersions>();
     mVersionCurrent = 0;
     mVersionDefault = 0;
@@ -71,6 +74,7 @@ cFodder::cFodder(std::shared_ptr<cWindow> pWindow) {
     mMouseY = 0;
     mMouseX_Offset = 0;
     mMouseY_Offset = 0;
+    mMouse_LeftWindow = SDL_GetTicks();
 
     mIntroDone = false;
 
@@ -151,34 +155,44 @@ cFodder::cFodder(std::shared_ptr<cWindow> pWindow) {
     mGame_Data.mGamePhase_Data.mIsComplete = false;
     mSidebar_Draw_Y = 0;
     word_3A3BF = 0;
+    word_82176 = 0;
+    word_82178 = 0;
 
     mDebug_PhaseSkip = 0;
 
-    mGame_InputTicks = 0;
+    mVideo_Ticked = false;
+    mPhase_InterruptTicks = 0;
+    mInterruptTick = 0;
+    mInput_Enabled = false;
+
     mKeyControlPressed = 0;
     mVersionReturnAfterPhase = false;
 
     mInput_LastKey = 0;
     mCustom_ExitMenu = 0;
 
-    word_428D8 = 0;
+    mBriefingHelicopter_NotDone = 0;
     word_3A05F = 0;
     byte_44AC0 = 0;
     mSoundDisabled = false;
     Squad_Walk_Target_SetAll(0);
     mPhase_Completed_Timer = 0;
     mVideo_Draw_ColumnsMax = 0;
-    word_428B6 = 0;
-    word_428B8 = 0;
+    mBriefingHelicopter_DirectionIndex = 0;
+    mBriefingHelicopter_Speed = 0;
     word_428BA = 0;
     mHelicopterPosX = 0;
     mHelicopterPosY = 0;
-    mBriefing_Helicopter_Off1 = 0;
-    mBriefing_Helicopter_Off2 = 0;
-    mBriefing_Helicopter_Off3 = 0;
-    mBriefing_Helicopter_Off4 = 0;
-    mBriefing_ParaHeli_Frame = 0;
-    mBriefing_Helicopter_Moving = 0;
+    mBriefingHelicopter_TargetDirection = 0;
+    mBriefingHelicopter_TargetSpeed = 0;
+    mBriefingHelicopter_NextUpdateCountdown = 0;
+
+    mBriefingHelicopter_Moving = 0;
+    mHelicopterOffsetIndex = 0;
+
+
+    mBriefingHelicopter_FrameCounter = 0;
+    mBriefingHelicopter_Moving = 0;
     mTroop_InRange_Callpad = 0;
 
     for (unsigned int x = 0; x < 0x18; ++x) {
@@ -208,6 +222,8 @@ cFodder::cFodder(std::shared_ptr<cWindow> pWindow) {
     mSurfaceMapLeft = 0;
 
     mSprite_SheetPtr = 0;
+
+    mWindow_Focus = false;
 
     Sprite_Clear_All();
 
@@ -252,28 +268,51 @@ void cFodder::Squad_Walk_Target_SetAll(int16 pValue) {
  */
 int16 cFodder::Phase_Cycle() {
 
-	// If demo playback is enabled, and a record resume cycle is set
-	if (mStartParams->mDemoPlayback && mStartParams->mDemoRecordResumeCycle) {
-		// See if we hit the tick count
-		if (mGame_Data.mDemoRecorded.mTick >= mStartParams->mDemoRecordResumeCycle) {
-			// Then resume recording
-			mStartParams->mDemoPlayback = false;
-			mStartParams->mDemoRecord = true;
-			mStartParams->mDemoRecordResumeCycle = 0;
-			mParams->mSleepDelta = 2;
-			mParams->mDemoRecord = mStartParams->mDemoRecord;
-			mParams->mDemoPlayback = mStartParams->mDemoPlayback;
-			mStartParams->mDisableVideo = false;
-			mStartParams->mDisableSound = false;
-			Mouse_Setup();
-		}
-	}
+    // If demo playback is enabled, and a record resume cycle is set
+    if (mStartParams->mDemoPlayback && mStartParams->mDemoRecordResumeCycle) {
+        // See if we hit the tick count
+        if (mGame_Data.mDemoRecorded.mTick >= mStartParams->mDemoRecordResumeCycle) {
+            // Then resume recording
+            mStartParams->mDemoPlayback = false;
+            mStartParams->mDemoRecord = true;
+            mStartParams->mDemoRecordResumeCycle = 0;
+            mParams->mSleepDelta = 0;
+            mParams->mDemoRecord = mStartParams->mDemoRecord;
+            mParams->mDemoPlayback = mStartParams->mDemoPlayback;
+            mStartParams->mDisableVideo = false;
+            mStartParams->mDisableSound = false;
+            Mouse_Setup();
+        }
+    }
 
-	MapTile_UpdateFromCamera();
-	MapTile_Update_Position();
+    if (mStartParams->mDemoPlayback) {
 
-	Game_Handle();
-	++mMission_EngineTicks;
+        if (!mGame_Data.mDemoRecorded.GetVideoTick(mGame_Data.mDemoRecorded.mTick)) {
+            return 1;
+        }
+        
+    } else {
+
+        do {
+            Video_Sleep();
+
+            if (mPhase_Paused) {
+                Phase_Paused();
+                continue;
+            }
+
+            if (mExit) {
+                return -1;
+            }
+        } while (mPhase_InterruptTicks < 3);
+    }
+
+    ++mMission_EngineTicks;
+    mPhase_InterruptTicks = 0;
+
+    if (mStartParams->mDemoRecord && !mStartParams->mDemoRecordResumeCycle) {
+        mGame_Data.mDemoRecorded.AddVideoTick(mGame_Data.mDemoRecorded.mTick);
+    }
 
 	if (mCamera_Start_Adjust) {
 		Camera_SetTargetToStartPosition();
@@ -310,56 +349,11 @@ int16 cFodder::Phase_Cycle() {
 
 	Mission_Sprites_Handle();
 	Squad_Switch_Timer();
-	if (!mStartParams->mDisableVideo)
-		mGraphics->Sidebar_Copy_To_Surface();
 
-	// Game Paused
-	if (mPhase_Paused) {
-		Phase_Paused();
-
-		mSurface->Save();
-
-		// Fade the background out, and the 'mission paused' message in
-		mSurface->palette_FadeTowardNew();
-		mSurface->palette_FadeTowardNew();
-		mSurface->palette_FadeTowardNew();
-
-		while (mPhase_Paused) {
-
-			// Update mouse
-			Mouse_Inputs_Get();
-			Mouse_DrawCursor();
-			// Draw surface
-			mSurface->draw();
-
-			// Copy the rendered surface of the 'mission paused' message over the top of the main surface
-			mSurface->mergeSurfaceBuffer(mSurface2);
-
-			mWindow->RenderAt(mSurface);
-			mWindow->FrameEnd();
-			Cycle_End();
-
-			mSurface->Restore();
-		}
-
-		mGraphics->PaletteSet();
-		mSurface->palette_SetFromNew();
-		mSurface->surfaceSetToPalette();
-
-		mPhase_Aborted = false;
-
-		// Redraw the screen
-		mGraphics->MapTiles_Draw();
-		Sprites_Draw();
-		mGraphics->Sidebar_Copy_To_Surface();
-	}
-
-	Mouse_DrawCursor();
+	//Mouse_DrawCursor();
 
 	if (mSurface->isPaletteAdjusting())
 		mSurface->palette_FadeTowardNew();
-
-	Camera_Update_Mouse_Position_For_Pan();
 
 	if (mPhase_ShowMapOverview && mSurfaceMapOverview) {
 
@@ -385,8 +379,10 @@ int16 cFodder::Phase_Cycle() {
 
 	//loc_10841
 	Sprite_Bullet_SetData();
+    Sound_Tick();
 	Squad_EnteredVehicle_TimerTick();
 	Squad_Set_CurrentVehicle();
+    Music_Check_MapTile_TrackChange();
 
 	// No squad is selected, so set count down timer
 	if (mSquad_Selected < 0 && !mSquad_Select_Timer)
@@ -395,8 +391,37 @@ int16 cFodder::Phase_Cycle() {
 	Sprite_HelicopterCallPad_Check();
 	Mission_Final_Timer();
 
-	Video_SurfaceRender();
 	return 1;
+}
+
+void cFodder::Phase_Paused() {
+    Draw_Phase_Paused();
+
+    // Fade the background out, and the 'mission paused' message in
+    mSurface->palette_FadeTowardNew();
+    mSurface->palette_FadeTowardNew();
+    mSurface->palette_FadeTowardNew();
+
+    while (mPhase_Paused) {
+
+        mSurface->draw();
+
+        // Copy the rendered surface of the 'mission paused' message over the top of the main surface
+        mSurface->mergeFrom(mSurface2);
+
+        Video_Sleep();
+    }
+
+    mGraphics->PaletteSet();
+    mSurface->palette_SetFromNew();
+    mSurface->surfaceSetToPalette();
+
+    mPhase_Aborted = false;
+
+    // Redraw the screen
+    mGraphics->MapTiles_Draw();
+    Sprites_Draw();
+    mGraphics->Sidebar_Copy_To_Surface();
 }
 
 void cFodder::Phase_Prepare() {
@@ -428,6 +453,7 @@ void cFodder::Phase_Prepare() {
 	//seg000:05D1
 
 	Phase_Goals_Set();
+    Map_Load_TileTracks();
 
 	Sprite_Bullet_SetData();
 	Sprite_Handle_Loop();
@@ -436,6 +462,9 @@ void cFodder::Phase_Prepare() {
 	mCamera_Start_Adjust = true;
 	mCamera_StartPosition_X = mSprites[0].field_0;
 	mCamera_StartPosition_Y = mSprites[0].field_4;
+
+    Music_Play_Tileset();
+    word_82176 = 0;
 
 	// Is map 17 x 12
 	{
@@ -485,25 +514,132 @@ int16 cFodder::Phase_Loop() {
 	//  0 = Phase Won
 	//  1 = Phase Running
     for (result = 1; result == 1; result = Phase_Cycle()) {
-		
-		Cycle_End();
+
+        // Demo playback mode
+        if (mStartParams->mDemoPlayback) {
+            if (mPhase_Aborted)
+                return -1;
+
+            {
+                std::lock_guard<std::mutex> lock(mSurfaceMtx);
+                mVideo_Ticked = false;
+                mVideo_Done = true;
+
+                //mStartParams->mDisableVideo = false;
+                Video_SurfaceRender(false, false);
+                mSurface->Restore();
+
+                mWindow->Cycle();
+                eventsProcess();
+            }
+
+            while (!mVideo_Ticked && !mExit) {
+                SDL_Delay(0);
+            }
+        }
     }
 
     return result;
 }
 
-void cFodder::Game_Handle() {
+void cFodder::Video_Sleep(cSurface* pSurface, const bool pShrink, const bool pVsync) {
+    mVideo_Ticked = false;
+    mVideo_Done = true;
+    if (!pSurface) {
+        pSurface = mSurface;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(mSurfaceMtx);
+
+        if (!mStartParams->mDisableVideo) {
+            if (!pShrink) {
+                Video_SurfaceRender(false, false, pSurface);
+            }
+            else {
+                Video_SurfaceRender(false, true, pSurface, false);
+            }
+            mSurface->Restore();
+        }
+    }
+
+    // If not in vsync mode, then wait for the Amiga 50Hz Interrupt
+    if (!pVsync) {
+        while (!mVideo_Ticked) {
+            SDL_Delay(1);
+        }
+    }
+
+    mWindow->Cycle();
+    eventsProcess();
+}
+
+/**
+ * Interrupt screen redraw
+ */
+void cFodder::Interrupt_Redraw() {
+    {
+        std::lock_guard<std::mutex> lock(mSurfaceMtx);
+
+        if (mParams->mDemoPlayback || mParams->mDemoRecord)
+            mGame_Data.mDemoRecorded.Tick();
+
+        Phase_Loop_Interrupt();
+
+        if (mInterruptCallback) {
+            mInterruptCallback();
+        }
+        else {
+            if (mPhase_In_Progress && !mPhase_ShowMapOverview) {
+                if (!mStartParams->mDisableVideo) {
+                    mGraphics->MapTiles_Draw();
+                }
+                Sprites_Draw();
+                mGraphics->Sidebar_Copy_To_Surface(0, mSurface);
+                Mouse_DrawCursor();
+            }
+        }
+        mVideo_Done = false;
+        mVideo_Ticked = true;
+    }
+}
+
+/**
+ * Interrupt Simulation
+ */
+void cFodder::Interrupt_Sim() {
+    Uint32 startTick = SDL_GetTicks();
+
+    while (!mExit) {
+        Uint32 currentTick = SDL_GetTicks();
+
+        if (currentTick - startTick >= g_Fodder->mParams->mSleepDelta) {
+            startTick = currentTick;
+
+            Interrupt_Redraw();
+
+            // wait for video_sleep call to finish
+            while (!mVideo_Done && !mExit) {
+                SDL_Delay(g_Fodder->mParams->mSleepDelta == 0 ? 0 : 1);
+            }
+        }
+        else {
+            SDL_Delay(1);
+        }
+    }
+}
+
+void cFodder::Phase_Loop_Interrupt() {
 
     // Input disabled or Mission not paused?
     if (!mInput_Enabled || !mPhase_Paused) {
 
-        ++mGame_InputTicks;
+        ++mPhase_InterruptTicks;
+        ++mInterruptTick;
 
         Mouse_Inputs_Get();
 
         if (mInput_Enabled) {
-            Camera_Handle();
-            Camera_Handle();
             Camera_Handle();
 
             if (!mPhase_Finished)
@@ -511,6 +647,12 @@ void cFodder::Game_Handle() {
         }
     }
 
+    if (mSound) {
+        Music_Increase_Channel_Volume();
+    }
+    // sub_A3DBC
+    // sub_8A27A
+    // 
     //loc_108AE
     if (mSquad_SwitchWeapon) {
         --mSquad_SwitchWeapon;
@@ -526,16 +668,22 @@ void cFodder::Game_Handle() {
     if (!mPhase_In_Progress)
         return;
 
-    if (mPhase_Completed_Timer || mPhase_Complete || mPhase_TryAgain || mPhase_Aborted) {
+    if (mPhase_Completed_Timer || mMapTile_Music_Play || mPhase_Complete || mPhase_TryAgain || mPhase_Aborted) {
         mPhase_Finished = true;
         return;
     }
+
+    if (!(mInterruptTick & 3))
+        Music_Fade_SwitchTrack();
+
+    //sub_A3B14
 
     if (!mSoundEffectToPlay)
         return;
 
     Sound_Play(mSquad_Leader, mSoundEffectToPlay, 0);
     mSoundEffectToPlay = 0;
+    
 }
 
 void cFodder::Camera_Handle() {
@@ -545,7 +693,17 @@ void cFodder::Camera_Handle() {
         Camera_Speed_MaxSet();
         Camera_Speed_Calculate();
         Camera_TileSpeedX_Set();
+
+        MapTile_UpdateFromCamera();
+        MapTile_Update_Position();
+
+        Camera_Update_Mouse_Position_For_Pan();
+
         Camera_Speed_Update_From_PanTarget();
+        
+        //Mouse_DrawCursor();
+        Camera_Speed_Update_From_PanTarget();
+
         Camera_PanTarget_AdjustToward_SquadLeader();
         Camera_Acceleration_Set();
     }
@@ -623,11 +781,11 @@ void cFodder::Camera_PanTarget_AdjustToward_SquadLeader() {
     if (Direction_Between_Points(Data0, Data4, SquadLeaderX, SquadLeaderY) < 0)
         return;
 
-    int32 DirectionX = mMap_Direction_Calculations[Data4 / 2];
+    int32 DirectionX = mDirectionVectorTable[Data4 / 2];
     Data4 += 0x80;
     Data4 &= 0X1FE;
 
-    int32 DirectionY = mMap_Direction_Calculations[Data4 / 2];
+    int32 DirectionY = mDirectionVectorTable[Data4 / 2];
 
     DirectionX = (DirectionX * word_3ABFD) >> 16;
     DirectionY = (DirectionY * word_3ABFD) >> 16;
@@ -647,7 +805,7 @@ void cFodder::Camera_PanTarget_AdjustToward_SquadLeader() {
 void cFodder::GameData_Reset() {
     mDebug_PhaseSkip = 0;
     mInput_Enabled = false;
-    mGame_InputTicks = 0;
+    mPhase_InterruptTicks = 0;
     mMission_EngineTicks = 0;
     mRecruit_Mission_Restarting = false;
 
@@ -673,6 +831,7 @@ void cFodder::GameData_Restore() {
 
 void cFodder::Phase_EngineReset() {
     // Clear memory 2454 to 3B58
+
     mPhase_EscapeKeyAbort = false;
     mPhase_Aborted2 = false;
     mButtonPressLeft = 0;
@@ -682,6 +841,7 @@ void cFodder::Phase_EngineReset() {
     mMouse_Button_LeftRight_Toggle = false;
     mMouse_Button_LeftRight_Toggle2 = false;
 
+    mMapTile_Music_Play = false;
     mVehicle_Input_Disabled = false;
     mMouse_Exit_Loop = false;
     mSquad_Member_Fire_CoolDown_Override = false;
@@ -929,6 +1089,9 @@ void cFodder::Phase_EngineReset() {
     mIntro_PlayTextDuration = 0;
     mSoundEffectToPlay_Set = 0;
 
+    memset(mSound_Priority, 0, sizeof(mSound_Priority));
+    memset(mSound_Timer, 0, sizeof(mSound_Timer));
+
     for (uint16 x = 0; x < 3; ++x)
         mSquad_EnteredVehicleTimer[x] = 0;
 	
@@ -972,6 +1135,13 @@ void cFodder::Phase_EngineReset() {
     mMapTile_Row_CurrentScreen = 0;
 
     mTroop_InRange_Callpad = 0;
+    mMusicTrack_unk = 0;
+    mMusic_CurrentTrack = 0;
+    mMusic_TargetVolume = 0;
+    mMusic_SlowVolumeDecrease = 0;
+    word_829F6 = 0;
+
+    mSprite_DrawList_Final.clear();
 }
 
 void cFodder::Phase_SquadPrepare() {
@@ -1430,11 +1600,11 @@ void cFodder::Camera_Speed_Update_From_PanTarget() {
             return;
         Data4 = Data0;
 
-        Data8 = mMap_Direction_Calculations[Data4 / 2];
+        Data8 = mDirectionVectorTable[Data4 / 2];
         Data4 += 0x80;
         Data4 &= 0x1FE;
 
-        DataC = mMap_Direction_Calculations[Data4 / 2];
+        DataC = mDirectionVectorTable[Data4 / 2];
         Data8 >>= 2;
         DataC >>= 2;
 
@@ -1658,13 +1828,12 @@ void cFodder::Camera_SetTargetToStartPosition() {
     mCamera_PanTargetX = mCamera_StartPosition_X;
     mCamera_PanTargetY = mCamera_StartPosition_Y;
 
-    Music_Play_Tileset();
     return;
 
 loc_11D8A:;
 
     if (mPhase_Completed_Timer)
-        goto loc_11E5B;
+        return;
 
     mCamera_MovePauseX = 6;
     mCamera_MovePauseY = 6;
@@ -1696,15 +1865,13 @@ loc_11D8A:;
 	}
     Mission_Sprites_Handle();
     mGraphics->Sidebar_Copy_To_Surface();
-    Mouse_DrawCursor();
     Camera_Prepare();
+    Video_Sleep();
 
     mInput_Enabled = true;
 
     mGraphics->PaletteSet();
 
-loc_11E5B:;
-    Music_Play_Tileset();
 }
 
 bool cFodder::Campaign_Load(std::string pName) {
@@ -1756,6 +1923,186 @@ void cFodder::Map_Load() {
         return;
 
     Map_Load_Resources();
+}
+
+void cFodder::Map_Load_TileTracks() {
+    uint8* tilePtr = mMap->data() + 0x62;
+
+    uint16_t heightCount = 0, widthCount;
+
+    mMapTileTracks.clear();
+
+    while (heightCount < mMapLoaded->getHeight()) {
+        widthCount = 0;
+
+        while (widthCount < mMapLoaded->getWidth()) {
+            uint16_t tile = (readLE<uint16>(tilePtr) & 0xE000) >> 8;
+
+            if (tile != 0) {
+                mMapTileTracks.emplace_back( widthCount , heightCount, tile >> 5 );
+            }
+
+            tilePtr += 2;
+            widthCount++;
+        }
+
+        heightCount++;
+    }
+}
+
+
+void cFodder::Music_Check_MapTile_TrackChange() {
+    if (mPhase_Completed_Timer != 0 || mGame_Data.mGamePhase_Data.mIsComplete || mMapTile_Music_Play)
+        return;
+
+    if (mSquad_Leader == INVALID_SPRITE_PTR || mSquad_Leader == 0)
+        return;
+
+    int16_t spriteX = mSquad_Leader->field_0 >> 4;
+    int16_t spriteY = mSquad_Leader->field_4 >> 4;
+
+    int16_t BestDistance = 0x10;
+    int16_t PlaySong = 0;
+
+    for (const auto& tile : mMapTileTracks) {
+        if (tile.X < 0)
+            break;
+
+        if (tile.Track > 4)
+            continue;
+
+        // Call to sub_A10F2
+        int16_t d0 = spriteX;
+        int16_t d1 = spriteY;
+        int16_t d2 = tile.X;
+        int16_t d3 = tile.Y;
+        int16_t d4 = 0x0F;
+        int16_t result = Map_Get_Distance_BetweenPoints(d0, d1, d2, d4, d3);
+
+        if (result < BestDistance) {
+            BestDistance = result;
+            PlaySong = tile.Track;
+        }
+    }
+
+
+    int16_t d0, d1;
+
+    if (BestDistance > 4) {
+        if (BestDistance >= 0xA) {
+            d0 = 1;
+            d1 = (BestDistance - 8) << 1;
+            d1 = d1 < 0x30 ? d1 : 0x30;
+        }
+        else {
+            d0 = PlaySong;
+            d1 = (BestDistance - 5) << 3;
+            d1 = 0x38 - d1;
+        }
+    }
+    else {
+        d0 = PlaySong;
+        d1 = 0x40;
+    }
+
+    Music_setup_track_unk(d0, d1);
+}
+
+void cFodder::Music_Fade_SwitchTrack() {
+    int16_t d0 = mMusicTrack_unk;
+
+    if (d0 == 0)
+        return;
+
+    int16_t d1 = mSound->Music_GetVolume(0);// byte_A4B5E[0x28];
+
+    // Changing track?
+    if (mMusic_CurrentTrack != d0) {
+        --d1;
+
+        // Once volume below 8, change to new song
+        if (d1 < 8) {
+            d1 = 8;
+            mMusic_CurrentTrack = d0;
+            Music_Play_Tileset(d0);
+        }
+    } else {
+
+        if (d1 < mMusic_TargetVolume) {
+            d1++;
+        } else {
+            d1 = mMusic_TargetVolume;
+            mMusicTrack_unk = 0;
+        }
+    }
+
+    //loc_878F4
+    // 
+    mSound->Music_SetVolume(-1, d1);
+    //byte_A4B5E[0x28] = d1;
+
+    if (word_829F6 == 0) {
+        //byte_A4B5E[0x29] = d1;
+    }
+}
+
+void cFodder::Music_setup_track_unk(int16_t d0, int16_t d1) {
+    if (mMusicTrack_unk != 0)
+        return;
+
+    if (mMusic_CurrentTrack != d0) {
+        mMusic_TargetVolume = d1;
+        mMusicTrack_unk = d0;
+    }
+    else {
+        //byte_A4B5E[0x28] = (uint8_t)d1;
+        mSound->Music_SetVolume(-1, d1);
+
+        if (word_829F6 == 0) {
+           // byte_A4B5E[0x29] = (uint8_t)d1;
+        }
+    }
+}
+
+void cFodder::Music_Increase_Channel_Volume() {
+
+    if (word_82176) {
+        int16 d0 = mInterruptTick & 3;
+        if (!d0) {
+            for (int i = 0; i < 4; ++i) {
+                int16 v = mSound->Music_GetVolume(i);
+                if (v < 0x40) {
+                    mSound->Music_SetVolume(i, ++v);
+                }
+            }
+        }
+    }
+
+    if (word_82178) {
+        Music_Decrease_Channel_Volume();
+    }
+
+    if (mMusic_SlowVolumeDecrease) {
+        int16 d0 = mInterruptTick & 0x3F;
+        if (!d0) {
+            Music_Decrease_Channel_Volume();
+        }
+    }
+}
+
+bool cFodder::Music_Decrease_Channel_Volume() {
+    bool ret = false;
+    if (mSound) {
+
+        for (int i = 0; i < 4; ++i) {
+            int16 v = mSound->Music_GetVolume(i);
+            if (v > 0) {
+                ret = true;
+                mSound->Music_SetVolume(i, --v);
+            }
+        }
+    }
+    return ret;
 }
 
 /**
@@ -1861,9 +2208,32 @@ void cFodder::Map_Load_Resources() {
     mGraphics->PaletteSet();
 }
 
-void cFodder::Music_Play_Tileset() {
-    if (!mStartParams->mDisableSound)
-        mSound->Music_Play(mMapLoaded->getTileType() + 0x32);
+void cFodder::Music_Play(int16 pTrack, int16 pSong) {
+    mMapTile_Music_Play = true;
+
+    word_82176 = -1;
+    word_82178 = 0;
+
+    mSound->Music_Play(pTrack, pSong);
+    mSound->Music_SetVolume(-1, 0);
+}
+
+void cFodder::Music_SetFullVolume() {
+    for (int i = 0; i < 4; ++i) {
+        mSound->Music_SetVolume(i, 0x40);
+    }
+}
+
+void cFodder::Music_Play_Tileset(int16_t pSong) {
+
+    if (!mStartParams->mDisableSound) {
+        if (pSong == -1)
+            pSong = 2;
+
+        mSound->Music_Play(mMapLoaded->getTileType() + 0x32, pSong);
+        mSound->Music_SetVolume(-1, 0);
+    }
+    mMapTile_Music_Play = false;
 }
 
 void cFodder::Camera_Pan_To_Target() {
@@ -1941,7 +2311,7 @@ void cFodder::Camera_Pan_Set_Speed() {
 }
 
 /**
- * Move the mouse position to follow the terrain as the camere pans
+ * Move the mouse position to follow the terrain as the camera pans
  */
 void cFodder::Camera_Update_Mouse_Position_For_Pan() {
 
@@ -2121,7 +2491,7 @@ void cFodder::Mission_Sprites_Handle() {
     MapTile_UpdateFromCamera();
 
     Map_Destroy_Tiles();
-    Sprites_Draw();
+    Sprites_Draw(mSurfaceFinal);
 }
 
 void cFodder::Sprite_Sort_DrawList() {
@@ -2152,15 +2522,19 @@ void cFodder::Sprite_Sort_DrawList() {
     });
 
     //loc_124AF
-    mSprite_DrawList_Final.clear();
-    for (auto spriteptr : mSprite_DrawList_First) {
-        mSprite_DrawList_Final.push_back(spriteptr);
-    }
-    for (auto spriteptr : mSprite_DrawList_Second) {
-        mSprite_DrawList_Final.push_back(spriteptr);
-    }
-    for (auto spriteptr : mSprite_DrawList_Third) {
-        mSprite_DrawList_Final.push_back(spriteptr);
+    {
+        std::lock_guard<std::mutex> lock(mSpriteMtx);
+
+        mSprite_DrawList_Final.clear();
+        for (auto spriteptr : mSprite_DrawList_First) {
+            mSprite_DrawList_Final.push_back(spriteptr);
+        }
+        for (auto spriteptr : mSprite_DrawList_Second) {
+            mSprite_DrawList_Final.push_back(spriteptr);
+        }
+        for (auto spriteptr : mSprite_DrawList_Third) {
+            mSprite_DrawList_Final.push_back(spriteptr);
+        }
     }
 }
 
@@ -2345,7 +2719,8 @@ void cFodder::Phase_TextSprite_Create_Mission(sSprite* pData2C) {
     pData2C->field_8 = 0xA2;
     pData2C->field_18 = eSprite_Text_Mission;
     if (!mStartParams->mDisableSound)
-        mSound->Music_Play(6);
+        Music_Play(6);
+    Music_SetFullVolume();
 }
 
 void cFodder::Phase_TextSprite_Create_Phase(sSprite* pData2C) {
@@ -2357,7 +2732,9 @@ void cFodder::Phase_TextSprite_Create_Phase(sSprite* pData2C) {
     pData2C->field_18 = eSprite_Text_Phase;
     
     if (!mStartParams->mDisableSound)
-        mSound->Music_Play(0x0C);
+        Music_Play(0x0C);
+
+    Music_SetFullVolume();
 }
 
 void cFodder::Phase_TextSprite_Create_Complete(sSprite* pData2C) {
@@ -2390,7 +2767,8 @@ void cFodder::Phase_Show_TryAgain() {
     Phase_TextSprite_Create_Again(&mSprites[42]);
 
     if (!mStartParams->mDisableSound)
-        mSound->Music_Play(0x0F);
+        Music_Play(0x0F);
+    Music_SetFullVolume();
 }
 
 void cFodder::Phase_TextSprite_Create_Try(sSprite* pData2C) {
@@ -2515,6 +2893,9 @@ void cFodder::Phase_Map_Overview_Show() {
     mVideo_Draw_PosX = (mSquad_Leader->field_0) + (mSurfaceMapLeft * 16);
     mVideo_Draw_PosY = (mSquad_Leader->field_4 - 0x10) + (mSurfaceMapTop * 16);
 	
+    mPhase_Paused = true;
+    mInput_Enabled = false;
+
 	if (mVideo_Draw_PosX < 0)
 		mVideo_Draw_PosX = 0;
 
@@ -2545,14 +2926,9 @@ void cFodder::Phase_Map_Overview_Show() {
                 mSurfaceMapOverview->Restore();
         }
 
-        Mouse_Inputs_Get();
-        if (!mStartParams->mDisableVideo) {
-            mWindow->RenderShrunk(mSurfaceMapOverview);
-            mWindow->FrameEnd();
-        }
         if (mPhase_Aborted)
             break;
-        Cycle_End();
+        Video_Sleep(mSurfaceMapOverview, true);
 
     } while (Mouse_Button_Left_Toggled() < 0);
 
@@ -2560,6 +2936,8 @@ void cFodder::Phase_Map_Overview_Show() {
     mGraphics->SetImageOriginal();
 
     mPhase_Aborted = false;
+    mPhase_Paused = false;
+    mInput_Enabled = true;
 }
 
 void cFodder::Map_Overview_Prepare() {
@@ -2607,36 +2985,45 @@ void cFodder::Map_Overview_Prepare() {
 void cFodder::eventProcess(const cEvent& pEvent) {
     switch (pEvent.mType) {
 
+    case eEvent_Focus:
+        mWindow_Focus = pEvent.mHasFocus;
+        break;
+
     case eEvent_KeyDown:
-        keyProcess(pEvent.mButton, false);
+        keyProcess(pEvent.mButton, true);
         break;
 
     case eEvent_KeyUp:
-        keyProcess(pEvent.mButton, true);
+        keyProcess(pEvent.mButton, false);
         break;
 
     case eEvent_MouseLeftDown:
         mMouse_EventLastPosition = pEvent.mPosition;
+        mMouse_EventLastPositionRelative = pEvent.mPositionRelative;
         mMouse_EventLastButtonsPressed |= 1;
         break;
 
     case eEvent_MouseRightDown:
         mMouse_EventLastPosition = pEvent.mPosition;
+        mMouse_EventLastPositionRelative = pEvent.mPositionRelative;
         mMouse_EventLastButtonsPressed |= 2;
         break;
 
     case eEvent_MouseLeftUp:
         mMouse_EventLastPosition = pEvent.mPosition;
+        mMouse_EventLastPositionRelative = pEvent.mPositionRelative;
         mMouse_EventLastButtonsPressed &= ~1;
         break;
 
     case eEvent_MouseRightUp:
         mMouse_EventLastPosition = pEvent.mPosition;
+        mMouse_EventLastPositionRelative = pEvent.mPositionRelative;
         mMouse_EventLastButtonsPressed &= ~2;
         break;
 
     case eEvent_MouseMove:
         mMouse_EventLastPosition = pEvent.mPosition;
+        mMouse_EventLastPositionRelative = pEvent.mPositionRelative;
         break;
 
     case eEvent_MouseWheel:
@@ -2671,8 +3058,6 @@ void cFodder::eventsProcess() {
     }
 
     mWindow->EventGet()->clear();
-
-    mGame_Data.mDemoRecorded.Tick();
 }
 
 void cFodder::keyProcess(uint8 pKeyCode, bool pPressed) {
@@ -2702,7 +3087,7 @@ void cFodder::keyProcess(uint8 pKeyCode, bool pPressed) {
 
     if (pKeyCode == SDL_SCANCODE_F3 && pPressed) {
         if (mParams->mDemoRecord) {
-            mStartParams->mDemoRecordResumeCycle = mGame_Data.mDemoRecorded.mTick - 80;
+            mStartParams->mDemoRecordResumeCycle = mGame_Data.mDemoRecorded.mTick - 200;
             mGame_Data.mGamePhase_Data.mIsComplete = true;
             mPhase_TryAgain = true;
         }
@@ -2716,6 +3101,13 @@ void cFodder::keyProcess(uint8 pKeyCode, bool pPressed) {
 
     if (pKeyCode == SDL_SCANCODE_F11 && pPressed)
         mWindow->ToggleFullscreen();
+
+    if (pKeyCode == SDL_SCANCODE_F12 && pPressed) {
+        mParams->mMouseLocked = !mParams->mMouseLocked;
+
+        if (mStartParams->mMouseAlternative)
+            mWindow->SetRelativeMouseMode(mParams->mMouseLocked);
+    }
 
     if (pKeyCode == SDL_SCANCODE_ESCAPE && pPressed && mPhase_Aborted)
         mPhase_Aborted2 = true;
@@ -2790,20 +3182,27 @@ void cFodder::Mouse_Setup() {
 
     mMouseX = (getCameraWidth() / 2) - 9;
     mMouseY = (getCameraHeight() / 2) - 9;
+    mInputMouseX = mMouseX;
+    mInputMouseY = mMouseY;
 }
 
 void cFodder::Mouse_Cursor_Handle() {
 	static bool WasClicked = false;
-	static bool CursorGrabbed = false;
+
 	const cPosition WindowPos = mWindow->GetWindowPosition();
 	const cDimension ScreenSize = mWindow->GetScreenSize();
 	const cDimension WindowSize = mWindow->GetWindowSize();
 	const cDimension scale = mWindow->GetScale();
+    static bool CursorGrabbed = true;
 
 	mMouseButtonStatus = mMouse_EventLastButtonsPressed;
+    if (mMouseButtonStatus) {
+        mMouseButtonStatus = mMouseButtonStatus;
+    }
 
-	if (!mWindow->hasFocusEvent() && CursorGrabbed)
-		CursorGrabbed = false;
+    if (!mWindow_Focus && CursorGrabbed) {
+        CursorGrabbed = false;
+    }
 
 	if (mStartParams->mMouseAlternative) {
 		mInputMouseX = (mMouse_EventLastPosition.mX / scale.getWidth()) + MOUSE_POSITION_X_ADJUST;
@@ -2814,18 +3213,21 @@ void cFodder::Mouse_Cursor_Handle() {
     // Check if the system mouse is grabbed
     if (!CursorGrabbed) {
 
-        if (!mWindow->hasFocusEvent() || mWindow->isMouseInside()) {
+        if (!mWindow_Focus && mWindow->isMouseInside()) {
             // Register mouse position even when not focused but cursor on window
             mInputMouseX = (mMouse_EventLastPosition.mX / scale.getWidth()) + MOUSE_POSITION_X_ADJUST;
             mInputMouseY = (mMouse_EventLastPosition.mY / scale.getHeight()) + MOUSE_POSITION_Y_ADJUST;
         }
         
+        if (SDL_GetTicks() - mMouse_LeftWindow < 100)
+            return;
+
         // Check if the system cursor x/y is inside our window
         // and ensure the mouse button has been released before we focus
-        if (mWindow->hasFocusEvent() && mWindow->isMouseInside() && !mWindow->isMouseButtonPressed_Global()) {
+        if (mWindow_Focus && mWindow->isMouseInside() && !mMouseButtonStatus) {
             WasClicked = true;
             CursorGrabbed = true;
-
+            
             if (!mWindow->isFullscreen()) {
                 // Ensure X not too close to a border
                 if (mInputMouseX <= MOUSE_POSITION_X_ADJUST)
@@ -2839,65 +3241,73 @@ void cFodder::Mouse_Cursor_Handle() {
                 else if (mInputMouseY >= ScreenSize.getHeight() + MOUSE_POSITION_Y_ADJUST - 1)
                     mInputMouseY = ScreenSize.getHeight() + MOUSE_POSITION_Y_ADJUST - 2;
             }
+            mWindow->SetRelativeMouseMode(true);
         }
     } else {
-        cPosition BorderMouse;
-
         if (!mWindow->isFullscreen()) {
-            // Need to check if the game cursor is near an edge: top-left / top-right / bottom-left / bottom-right
-            if ((mMouseX <= MOUSE_POSITION_X_ADJUST && mMouseY <= MOUSE_POSITION_Y_ADJUST) ||
-                (mMouseX >= ScreenSize.getWidth() + MOUSE_POSITION_X_ADJUST - 1 && mMouseY <= MOUSE_POSITION_Y_ADJUST) ||
-                (mMouseX <= MOUSE_POSITION_X_ADJUST && mMouseY >= ScreenSize.getHeight() + MOUSE_POSITION_Y_ADJUST - 1) ||
-                (mMouseX >= ScreenSize.getWidth() + MOUSE_POSITION_X_ADJUST - 1 && mMouseY >= ScreenSize.getHeight() + MOUSE_POSITION_Y_ADJUST - 1)) {
-                BorderMouse.mX = mMouseX <= MOUSE_POSITION_X_ADJUST ? WindowPos.mX - 1 : WindowPos.mX + WindowSize.getWidth() + 1;
-                BorderMouse.mY = mMouseY <= MOUSE_POSITION_Y_ADJUST ? WindowPos.mY - 1 : WindowPos.mY + WindowSize.getHeight() + 1;
-            }
-            // Need to check if the game cursor is near a border on X axis
-            else if (mMouseX <= MOUSE_POSITION_X_ADJUST || mMouseX >= ScreenSize.getWidth() + MOUSE_POSITION_X_ADJUST - 1) {
-                BorderMouse.mX = mMouseX <= MOUSE_POSITION_X_ADJUST ? WindowPos.mX - 1 : WindowPos.mX + WindowSize.getWidth() + 1;
-                BorderMouse.mY = WindowPos.mY + (mMouseY - MOUSE_POSITION_Y_ADJUST) * scale.getHeight();
-            } // Need to check if the game cursor is near a border Y axis
-            else if (mMouseY <= MOUSE_POSITION_Y_ADJUST || mMouseY >= ScreenSize.getHeight() + MOUSE_POSITION_Y_ADJUST - 1) {
-                BorderMouse.mX = WindowPos.mX + (mMouseX - MOUSE_POSITION_X_ADJUST) * scale.getWidth();
-                BorderMouse.mY = mMouseY <= MOUSE_POSITION_Y_ADJUST ? WindowPos.mY - 1 : WindowPos.mY + WindowSize.getHeight() + 1;
-            }
+            if (!mParams->mMouseLocked) {
+                cPosition BorderMouse = Mouse_GetOnBorderPosition();
 
-            //  if yes set system cursor outside the border
-            //  if yes set system cursor outside the border
-            if (BorderMouse.mX || BorderMouse.mY) {
-                CursorGrabbed = false;
-                mWindow->SetMousePosition(BorderMouse);
-                return;
+                // Cursor leaving window
+                if (BorderMouse.mX || BorderMouse.mY) {
+                    CursorGrabbed = false;
+                    mMouse_LeftWindow = SDL_GetTicks();
+
+                    mWindow->SetRelativeMouseMode(false);
+                    mWindow->SetMousePosition(BorderMouse);
+                    return;
+                }
             }
         }
 
         // hack to avoid moving cursor on window resizing
         if (mWindow->isResized()) {
             mWindow->ClearResized();
+
         } else {
             if (WasClicked) {
                 if (!mWindow->isMouseButtonPressed_Global())
                     WasClicked = false;
             } else {
                 // Calc the distance from the cursor to the centre of the window
-                const cPosition Diff = (mMouse_EventLastPosition - WindowSize.getCentre());
-
-                mInputMouseX = mMouseX + static_cast<int16>((Diff.mX / scale.getWidth()) * 1.5);
-                mInputMouseY = mMouseY + static_cast<int16>((Diff.mY / scale.getHeight()) * 1.5);
+                mInputMouseX = mMouseX + static_cast<int16>(mMouse_EventLastPositionRelative.mX);
+                mInputMouseY = mMouseY + static_cast<int16>(mMouse_EventLastPositionRelative.mY);
+                mMouse_EventLastPositionRelative = { 0,0 };
             }
         }
-
-        // Set system cursor back to centre of window
-        mWindow->SetMousePosition(WindowSize.getCentre() + WindowPos);
     }
+}
+
+cPosition cFodder::Mouse_GetOnBorderPosition() {
+    cPosition BorderMouse;
+    const cPosition WindowPos = mWindow->GetWindowPosition();
+    const cDimension ScreenSize = mWindow->GetScreenSize();
+    const cDimension WindowSize = mWindow->GetWindowSize();
+    const cDimension scale = mWindow->GetScale();
+
+    if ((mMouseX <= MOUSE_POSITION_X_ADJUST && mMouseY <= MOUSE_POSITION_Y_ADJUST) ||
+        (mMouseX >= ScreenSize.getWidth() + MOUSE_POSITION_X_ADJUST - 1 && mMouseY <= MOUSE_POSITION_Y_ADJUST) ||
+        (mMouseX <= MOUSE_POSITION_X_ADJUST && mMouseY >= ScreenSize.getHeight() + MOUSE_POSITION_Y_ADJUST - 1) ||
+        (mMouseX >= ScreenSize.getWidth() + MOUSE_POSITION_X_ADJUST - 1 && mMouseY >= ScreenSize.getHeight() + MOUSE_POSITION_Y_ADJUST - 1)) {
+        BorderMouse.mX = mMouseX <= MOUSE_POSITION_X_ADJUST ? WindowPos.mX - 1 : WindowPos.mX + WindowSize.getWidth() + 1;
+        BorderMouse.mY = mMouseY <= MOUSE_POSITION_Y_ADJUST ? WindowPos.mY - 1 : WindowPos.mY + WindowSize.getHeight() + 1;
+    }
+    // Need to check if the game cursor is near a border on X axis
+    else if (mMouseX <= MOUSE_POSITION_X_ADJUST || mMouseX >= ScreenSize.getWidth() + MOUSE_POSITION_X_ADJUST - 1) {
+        BorderMouse.mX = mMouseX <= MOUSE_POSITION_X_ADJUST ? WindowPos.mX - 1 : WindowPos.mX + WindowSize.getWidth() + 1;
+        BorderMouse.mY = WindowPos.mY + (mMouseY - MOUSE_POSITION_Y_ADJUST) * scale.getHeight();
+    } // Need to check if the game cursor is near a border Y axis
+    else if (mMouseY <= MOUSE_POSITION_Y_ADJUST || mMouseY >= ScreenSize.getHeight() + MOUSE_POSITION_Y_ADJUST - 1) {
+        BorderMouse.mX = WindowPos.mX + (mMouseX - MOUSE_POSITION_X_ADJUST) * scale.getWidth();
+        BorderMouse.mY = mMouseY <= MOUSE_POSITION_Y_ADJUST ? WindowPos.mY - 1 : WindowPos.mY + WindowSize.getHeight() + 1;
+    }
+
+    return BorderMouse;
 }
 
 void cFodder::Mouse_Inputs_Get() {
 
-	
     if (mParams->mDemoPlayback) {
-
-       // Window_UpdateScreenSize();
 
         auto State = mGame_Data.mDemoRecorded.GetState(mGame_Data.mDemoRecorded.mTick);
         if (State) {
@@ -2915,8 +3325,7 @@ void cFodder::Mouse_Inputs_Get() {
         Mouse_Cursor_Handle();
     }
 
-    if (mParams->mDemoRecord)
-
+    if (mParams->mDemoRecord && !mParams->mDemoPlayback)
         mGame_Data.mDemoRecorded.AddState(mGame_Data.mDemoRecorded.mTick, cStateRecorded{ mInputMouseX, mInputMouseY, mMouseButtonStatus });
 
     Mouse_ButtonCheck();
@@ -3106,7 +3515,8 @@ void cFodder::VersionSwitch(const sGameVersion* pVersion) {
             GUI_Sidebar_Setup();
 
         mSurface->palette_FadeTowardNew();
-        Music_Play_Tileset();
+        mMusicTrack_unk = mMusic_CurrentTrack;
+        mMusic_CurrentTrack = 0;
     }
     
     if(mRecruit_Screen_Active && mVersionCurrent->hasGfx(eGFX_HILL)) {
@@ -3118,7 +3528,7 @@ void cFodder::VersionSwitch(const sGameVersion* pVersion) {
         }
 
         if (!mStartParams->mDisableSound)
-            mSound->Music_Play(0);
+            Music_Play(0);
     }
 
 }
@@ -3227,10 +3637,15 @@ void cFodder::Prepare(std::shared_ptr<sFodderParameters> pParams) {
     mSidebar_Screen_Buffer = (uint16*) new uint8[mSidebar_Buffer_Size];
     mSidebar_Screen_BufferPtr = mSidebar_Screen_Buffer;
 
+    memset(mSidebar_Back_Buffer, 0, mSidebar_Buffer_Size);
+    memset(mSidebar_Screen_Buffer, 0, mSidebar_Buffer_Size);
+
     mBriefing_Render_1_Mode = -1;
 
     mSurface = new cSurface( getSurfaceSize() );
     mSurface2 = new cSurface(getSurfaceSize() );
+    mSurfaceFinal = new cSurface(getSurfaceSize());
+    mSurfaceRecruit = new cSurface(getSurfaceSize());
 
 	Sprite_Clear_All();
 
@@ -3320,7 +3735,7 @@ int16 cFodder::Sprite_Create_RandomExplosion() {
     return Data0;
 }
 
-void cFodder::Phase_Paused() {
+void cFodder::Draw_Phase_Paused() {
     mSurface2->clearBuffer();
 
     mGraphics->PaletteSet(mSurface2);
@@ -3360,7 +3775,7 @@ void cFodder::Phase_TextSprite_Create_GameOver(sSprite* pData2C) {
     pData2C->field_18 = eSprite_Text_GameOver;
     
     if (!mStartParams->mDisableSound)
-        mSound->Music_Play(8);
+        Music_Play(8);
 }
 
 void cFodder::Mouse_DrawCursor() {
@@ -3414,7 +3829,9 @@ bool cFodder::Sprite_OnScreen_Check() {
     return mGraphics->Sprite_OnScreen_Check();
 }
 
-void cFodder::Sprites_Draw() {
+void cFodder::Sprites_Draw(cSurface* pSurface) {
+
+    std::lock_guard<std::mutex> lock(mSpriteMtx);
 
     for( auto& Sprite : mSprite_DrawList_Final) {
 
@@ -3427,7 +3844,7 @@ void cFodder::Sprites_Draw() {
         else {
             int16 Data0 = Sprite->field_8;
             int16 Data4 = Sprite->field_A;
-            Sprite_Draw_Frame(Sprite, Data0, Data4);
+            Sprite_Draw_Frame(Sprite, Data0, Data4, pSurface);
         }
     }
 }
@@ -3447,20 +3864,50 @@ loc_14D66:;
     mSoundEffectToPlay = mSoundEffectToPlay_Set;
 }
 
-void cFodder::Sound_Play(sSprite* pSprite, int16 pSoundEffect, int16 pData8) {
+void cFodder::Sound_Tick() {
+    int16* a4 = mSound_Timer;
+
+    for (int16 d3 = 3; d3 >= 0; --d3) {
+        if (a4[d3] != 0) {
+            a4[d3]--;
+        }
+    }
+
+}
+void cFodder::Sound_Play(sSprite* pSprite, int16 pSoundEffect, int16 pPriority) {
 
     if (mSoundDisabled)
         return;
 
+    static uint16 word_81DF6 = 0;
+
+    uint16_t d0 = word_81DF6 + 1;
+    d0 = (d0 & 3) | 2;
+    word_81DF6 = d0;
+
+    int16* a4 = mSound_Timer;
+    int16* a6 = mSound_Priority;
+
+    if (a6[d0] <= pPriority) {
+        a6[d0] = pPriority;
+    }
+    else {
+        if (a4[d0] != 0) {
+            return;
+        }
+        a6[d0] = pPriority;
+    }
+    a4[d0] = 0x0C;
+
     //loc_14BD4
-    pData8 = mCameraX >> 16;
-    pData8 += (getCameraWidth() / 2) - 8;
+    int16 Data8 = mCameraX >> 16;
+    Data8 += getCameraWidth() / 2;
 
     if (pSprite != INVALID_SPRITE_PTR)
-        pData8 -= pSprite->field_0;
+        Data8 -= pSprite->field_0;
 
     int16 DataC = mCameraY >> 16;
-    DataC += (getCameraHeight() - 8) / 2;
+    DataC += getCameraHeight() / 2;
 
     if (pSprite != INVALID_SPRITE_PTR)
         DataC -= pSprite->field_4;
@@ -3468,7 +3915,7 @@ void cFodder::Sound_Play(sSprite* pSprite, int16 pSoundEffect, int16 pData8) {
     int16 X = 0;
     int16 Y = 0;
 
-    Map_Get_Distance_BetweenPoints_Within_640(X, Y, pData8, DataC);
+    Map_Get_Distance_BetweenPoints_Within_640(X, Y, Data8, DataC);
 
     int Volume = 40;
     Volume -= (X / 16);
@@ -3477,92 +3924,147 @@ void cFodder::Sound_Play(sSprite* pSprite, int16 pSoundEffect, int16 pData8) {
         return;
 
     if (!mStartParams->mDisableSound)
-        mSound->Sound_Play(mMapLoaded->getTileType(), pSoundEffect, Volume);
+        mSound->Sound_Play(mMapLoaded->getTileType(), pSoundEffect, Volume, d0);
 }
 
 void cFodder::Mission_Intro_Helicopter_Start() {
+    mBriefingHelicopter_TimeScale = 60.0f / mWindow->GetRefreshRate();
+
     mHelicopterPosX = 0x01500000;
-    if (mVersionCurrent->isPC())
-        mHelicopterPosY = 0x00260000;
-    else
-        mHelicopterPosY = 0x00300000;
+    mHelicopterPosY = 0x001E0000;
 
-    mBriefing_Helicopter_Off1 = mBriefing_Helicopter_Offsets[0];
-    mBriefing_Helicopter_Off2 = mBriefing_Helicopter_Offsets[1];
-    mBriefing_Helicopter_Off3 = mBriefing_Helicopter_Offsets[2];
-    mBriefing_Helicopter_Off4 = &mBriefing_Helicopter_Offsets[3];
-    mBriefing_ParaHeli_Frame = 0;
-    mBriefing_Helicopter_Moving = -1;
-    word_428D8 = -1;
+    mBriefingHelicopter_Speed = 0;
+    mPaletteLevel = 0;
+    mBriefingHelicopter_ScreenX = 0xD0;
 
-    sub_1594F();
+    mBriefingHelicopter_Moving = 0;
+    mHelicopterOffsetIndex = 0;
+    mBriefingHelicopter_NextUpdateCountdown = 0;
+
+    Briefing_Update_Helicopter();
+    mBriefingHelicopter_FrameCounter = 0;
+    mBriefingHelicopter_Moving = 1;
+    mBriefingHelicopter_NotDone = -1;
+
+    mBriefingHelicopter_DirectionIndex = 0x180;
+    mBriefingHelicopter_TargetDirection = 0x180;
+
 }
 
 void cFodder::Briefing_Update_Helicopter() {
-    word_428B6 &= 0x1FE;
-    uint16 bx = word_428B6;
 
-    int32 ax = mMap_Direction_Calculations[(bx / 2) & 0xFF];
+    mBriefingHelicopter_ScreenX = (((int)mHelicopterPosX - 0x20) >> 16);
+    mBriefingHelicopter_ScreenY = (((int)mHelicopterPosY) >> 16);
 
+    mBriefingHelicopter_NextUpdateCountdown -= mBriefingHelicopter_TimeScale;
+
+    if (mBriefingHelicopter_NextUpdateCountdown <= 0.0f) {
+
+        mBriefingHelicopter_TargetDirection = mBriefing_Helicopter_Offsets_Amiga[mHelicopterOffsetIndex];
+        mBriefingHelicopter_TargetSpeed = mBriefing_Helicopter_Offsets_Amiga[mHelicopterOffsetIndex + 1];
+        mBriefingHelicopter_NextUpdateCountdown = (mBriefing_Helicopter_Offsets_Amiga[mHelicopterOffsetIndex + 2]);
+
+        if (mBriefingHelicopter_NextUpdateCountdown <= 0.0f)
+            return;
+
+        mHelicopterOffsetIndex += 3;
+    }
+
+    mBriefingHelicopter_DirectionIndex &= 0x1FE;
+    uint16 bx = mBriefingHelicopter_DirectionIndex;
+
+    int32 ax = mDirectionVectorTable[(bx / 2) & 0xFF];
     ax >>= 2;
 
-    mHelicopterPosX += ax * word_428B8;
+    mHelicopterPosX += (ax * mBriefingHelicopter_Speed * mBriefingHelicopter_TimeScale);
 
     bx += 0x80;
     bx &= 0x1FE;
 
-    ax = mMap_Direction_Calculations[(bx / 2) & 0xFF];
+    ax = mDirectionVectorTable[(bx / 2) & 0xFF];
     ax >>= 2;
-    mHelicopterPosY += ax * word_428B8;
 
-    bx = mBriefing_Helicopter_Off1 - word_428B6;
+    mHelicopterPosY += (ax * mBriefingHelicopter_Speed * mBriefingHelicopter_TimeScale);
+
+    bx = mBriefingHelicopter_TargetDirection - mBriefingHelicopter_DirectionIndex;
     bx >>= 5;
     --bx;
     bx ^= 0x0F;
     bx &= 0x0F;
 
-    int16 al = mSprite_Direction_Frame_Unk[bx];
+    int16 al = mDirectionStepTable[bx];
     al <<= 2;
-    word_428B6 += al;
-    word_428B6 &= 0x1FE;
+    //mBriefingHelicopter_DirectionIndex += al;
+    mBriefingHelicopter_DirectionIndex += static_cast<int>(al * mBriefingHelicopter_TimeScale);
 
-    if (mBriefing_Helicopter_Off2 != word_428B8) {
-        if (word_428B8 >= mBriefing_Helicopter_Off2)
-            word_428B8 -= 4;
+    mBriefingHelicopter_DirectionIndex &= 0x1FE;
+
+    if (mBriefingHelicopter_TargetSpeed != mBriefingHelicopter_Speed) {
+        if (mBriefingHelicopter_Speed > mBriefingHelicopter_TargetSpeed)
+            mBriefingHelicopter_Speed -= (1.0f * mBriefingHelicopter_TimeScale);
         else
-            word_428B8 += 4;
+            mBriefingHelicopter_Speed += (1.0f * mBriefingHelicopter_TimeScale);
     }
 
-	if (mVersionCurrent->isCannonFodder1() && mVersionCurrent->isPC())
-		mBriefing_ParaHeli_Frame += 1;
+    if (mVersionCurrent->isCannonFodder1() && mVersionCurrent->isPC())
+        mBriefingHelicopter_FrameCounter += 1;
 
-    if (mBriefing_ParaHeli_Frame == 4)
-        mBriefing_ParaHeli_Frame = 0;
-
-    --word_428BA;
-    if (word_428BA <= 0)
-        sub_1594F();
-
+    if (mBriefingHelicopter_FrameCounter >= 4)
+        mBriefingHelicopter_FrameCounter = 0;
 }
 
-void cFodder::sub_1594F() {
+float mBriefingHelicopter_TransitionCounter = 0;
 
-    word_428B6 = mBriefing_Helicopter_Off1;
-    word_428B8 = mBriefing_Helicopter_Off2;
-    word_428BA = mBriefing_Helicopter_Off3;
-    mBriefing_Helicopter_Off1 = *mBriefing_Helicopter_Off4++;
-    mBriefing_Helicopter_Off2 = *mBriefing_Helicopter_Off4++;
-    mBriefing_Helicopter_Off3 = *mBriefing_Helicopter_Off4++;
+void cFodder::Briefing_Helicopter_Check() {
+    Music_Increase_Channel_Volume();
 
-    if (word_428B6 == -1) {
-        mBriefing_Helicopter_Moving = 0;
-        word_428D8 = 0;
+    const float fadeDurationSeconds = 0.64f; // original 16 steps @ 50Hz every 2nd frame
+    const int targetSteps = static_cast<int>(16.0f / mBriefingHelicopter_TimeScale);
 
-        mGraphics->mImageMissionIntro.CopyPalette(mGraphics->mPalette, 0x100, 0);
-        mSurface->paletteNew_SetToBlack();
+    mBriefingHelicopter_TransitionCounter += mBriefingHelicopter_TimeScale;
+
+    if (!mMouse_Exit_Loop || !mPhase_Aborted) {
+
+        if (mBriefingHelicopter_ScreenX > 0x30) {
+
+            if (mBriefingHelicopter_TransitionCounter >= 2.0f) {
+                mBriefingHelicopter_TransitionCounter = 0.0f;
+
+                if (mBriefingHelicopter_Moving < targetSteps) {
+                    mBriefingHelicopter_Moving++;
+                    mPaletteLevel++;
+                    return;
+                }
+            }
+
+            if (mBriefingHelicopter_Moving >= targetSteps) {
+                Briefing_Update_Helicopter();
+            }
+            return;
+        }
     }
 
+    if (mBriefingHelicopter_TransitionCounter >= 2.0f) {
+        mBriefingHelicopter_TransitionCounter = 0.0f;
+
+        if (mBriefingHelicopter_Moving == 0 && mBriefingHelicopter_NotDone) {
+            mBriefingHelicopter_NotDone = 0;
+            mGraphics->mImageMissionIntro.CopyPalette(mGraphics->mPalette, 0x100, 0);
+        }
+        else {
+            if (mBriefingHelicopter_Moving > 0 || mPaletteLevel > 0) {
+                mBriefingHelicopter_Moving--;
+                mPaletteLevel--;
+                mSurface->paletteNew_SetToBlack();
+            }
+
+        }
+    }
+
+    Briefing_Update_Helicopter();
 }
+
+
 
 void cFodder::Mission_Intro_Draw_OpenFodder() {
     // Draw OPEN FODDER
@@ -3586,6 +4088,27 @@ void cFodder::Mission_Intro_Draw_Mission_Name() {
         Mission_Intro_Draw_OpenFodder();
     else
         Briefing_Draw_Mission_Title(0xB5);
+}
+
+std::string cFodder::Briefing_Get_Mission_Title() {
+    std::stringstream Mission;
+
+    if (mGame_Data.mMission_Number == 0) {
+        Mission << "OPEN FODDER";
+    }
+    else {
+        Mission << "MISSION ";
+        Mission << tool_StripLeadingZero(std::to_string(mGame_Data.mMission_Number));
+    }
+
+    return Mission.str();
+}
+
+std::string cFodder::Briefing_Get_Phase_Name() {
+    if (mGame_Data.mMission_Number == 0)
+        return "";
+
+    return mGame_Data.mMission_Current->GetName();
 }
 
 /**
@@ -3746,6 +4269,8 @@ void cFodder::Campaign_Select_Setup() {
 	}
 
 	Campaign_Select_Sprite_Prepare();
+    Music_Play(mMapLoaded->getTileType() + 0x32, 4);
+    mSound->Music_SetVolume(-1, 0x10);
 
 	if (mGUI_SaveLoadAction != 3) {
 		mSurface->palette_FadeTowardNew();
@@ -3760,11 +4285,24 @@ void cFodder::Campaign_Select_Setup() {
 	mDemo_ExitMenu = 0;
 
 	Camera_Reset();
+
 }
 
 std::string cFodder::Campaign_Select_File(const char* pTitle, const char* pSubTitle, const char* pPath, const char* pType, eDataType pData) {
 
 	Campaign_Select_Setup();
+    MapTiles_Draw();
+
+    mInterruptCallback = [this, pTitle, pSubTitle]() {
+        if (!mStartParams->mDisableVideo) {
+            mGraphics->MapTiles_Draw();
+        }
+        Sprites_Draw();
+        Campaign_Select_DrawMenu(pTitle, pSubTitle);
+        mGraphics->SetActiveSpriteSheet(eGFX_IN_GAME);
+
+        Mouse_DrawCursor();
+    };
 
     do {
 
@@ -3772,6 +4310,8 @@ std::string cFodder::Campaign_Select_File(const char* pTitle, const char* pSubTi
 
     } while (mGUI_SaveLoadAction == 3);
 
+
+    mInterruptCallback = nullptr;
     mPhase_In_Progress = false;
 
     if (mGUI_SaveLoadAction == 1)
@@ -3832,7 +4372,12 @@ void cFodder::Campaign_Selection() {
 
         // Single Map Mode?
         if (CampaignFile == "Single Map" || CampaignFile == "Random Map") {
-            
+
+            if (CampaignFile == "Random Map") {
+                mStartParams->mSkipRecruit = false;
+                mParams->mSkipRecruit = false;
+            }
+
             mGame_Data.mCampaign.SetSingleMapCampaign();
             mCustom_Mode = eCustomMode_Map;
             return;
@@ -3949,32 +4494,29 @@ void cFodder::Campaign_Select_Sprite_Prepare() {
 
     word_3AA1D = word_3BED5[0];
 
+    mSoundDisabled = true;
     if(mMapLoaded->getTileType() == eTileTypes_Jungle)
         Map_Add_Structure(mStructuresBarracksWithSoldier[mMapLoaded->getTileType()], 4, 2);
 
     if(mMapLoaded->getTileType() == eTileTypes_AFX)
         Map_Add_Structure(mStructuresBarracksWithSoldier[mMapLoaded->getTileType()], 2, 5);
+    mSoundDisabled = false;
 }
 
 void cFodder::Campaign_Select_File_Cycle(const char* pTitle, const char* pSubTitle) {
 	static int16 Timedown = 0;
 
-	mGraphics->SetActiveSpriteSheet(eGFX_IN_GAME);
-	Sprite_Frame_Modifier_Update();
-	Mission_Sprites_Handle();
-
-	mSurface->clearBuffer();
-	MapTiles_Draw();
-	Sprites_Draw();
-
-	Campaign_Select_DrawMenu(pTitle, pSubTitle);
-
+    if (mPhase_InterruptTicks >= 3) {
+        mPhase_InterruptTicks = 0;
+        Mission_Sprites_Handle();
+        Sound_Tick();
+        if(mInterruptCallback)
+            mInterruptCallback();
+    }
 
 	if (mSurface->isPaletteAdjusting())
 		mSurface->palette_FadeTowardNew();
 
-	Mouse_Inputs_Get();
-	Mouse_DrawCursor();
 
 	if (Timedown)
 		--Timedown;
@@ -3997,15 +4539,13 @@ void cFodder::Campaign_Select_File_Cycle(const char* pTitle, const char* pSubTit
 		GUI_Handle_Element_Mouse_Check(mGUI_Elements);
 
 	GUI_Button_Load_MouseWheel();
-	Video_SurfaceRender();
-	Cycle_End();
 }
 
 void cFodder::Campaign_Select_File_Loop(const char* pTitle, const char* pSubTitle) {
 
-
     do {
 		Campaign_Select_File_Cycle(pTitle, pSubTitle);
+        Video_Sleep();
 
     } while (mGUI_SaveLoadAction <= 0);
 
@@ -4133,7 +4673,7 @@ void cFodder::Mouse_Cursor_Update() {
     int16 Data0, Data4, Data8;
 
     // Sidebar
-    if (mMouseX < 0x10) {
+    if (mMouseX < 32) {
         mMouseSpriteNew = eSprite_pStuff_Mouse_Cursor;
         mMouseX_Offset = 0;
         mMouseY_Offset = 0;
@@ -4459,12 +4999,12 @@ loc_23056:;
     if (!pSprite->field_36)
         return;
 
-    Data0 = mGame_InputTicks;
+    Data0 = mInterruptTick;
     Data0 &= 1;
     Data0 += 3;
     pSprite->field_20 = Data0;
     Data0 = -Data0;
-    pSprite->field_1A = (((int64)pSprite->field_1A & 0xFFFF) | Data0 << 16);
+    pSprite->field_1A = (((int64)pSprite->field_1A & 0xFFFF) | (Data0 << 16));
     return;
 
 loc_230B0:;
@@ -5581,6 +6121,8 @@ void cFodder::Sprite_Handle_Helicopter_Human_Deploy_Weapon(sSprite* pSprite) {
 
     if (pSprite->field_6F == eVehicle_Helicopter_Homing)
         goto loc_24917;
+
+    return;
 
 loc_24905:;
     if (!Sprite_Create_Grenade2(pSprite))
@@ -7131,11 +7673,11 @@ void cFodder::Sprite_Movement_Calculate(sSprite* pSprite) {
     pSprite->field_10 &= 0x1FE;
     int16 Data4 = pSprite->field_10;
 
-    int16 Data8 = mMap_Direction_Calculations[Data4 / 2];
+    int16 Data8 = mDirectionVectorTable[Data4 / 2];
 
     Data4 += 0x80;
     Data4 &= 0x1FE;
-    int16 DataC = mMap_Direction_Calculations[Data4 / 2];
+    int16 DataC = mDirectionVectorTable[Data4 / 2];
     Data8 >>= 2;
     DataC >>= 2;
     //seg007:064F
@@ -7301,7 +7843,7 @@ void cFodder::sub_2A3D4(sSprite* pSprite) {
     DataC -= Data4;
     DataC &= 0x0F;
     //seg007:0920
-    DataC = (int16)mSprite_Direction_Frame_Unk[DataC];
+    DataC = (int16)mDirectionStepTable[DataC];
     DataC <<= 1;
 
     mDirectionMod = DataC;
@@ -7889,7 +8431,7 @@ void cFodder::Sprite_SetDirectionMod(sSprite* pSprite) {
     int16 Data4 = Data0;
     Data4 &= 0x0F;
 
-    mDirectionMod = (int16)mSprite_Direction_Frame_Unk[Data4];
+    mDirectionMod = (int16)mDirectionStepTable[Data4];
 }
 
 void cFodder::Sprite_Vehicle_Direction_Update(sSprite* pSprite, int16& pData1C) {
@@ -7903,7 +8445,7 @@ void cFodder::Sprite_Vehicle_Direction_Update(sSprite* pSprite, int16& pData1C) 
     Data0 -= Data4;
     Data4 = Data0;
     Data4 &= 0x0F;
-    int16 DataC = mSprite_Direction_Frame_Unk[Data4];
+    int16 DataC = mDirectionStepTable[Data4];
     if (!DataC)
         return;
 
@@ -8038,8 +8580,8 @@ bool cFodder::MapTile_Update_Position() {
     }
 
     if (TileColumns || TileRows) {
-        if (!mStartParams->mDisableVideo)
-            mGraphics->MapTiles_Draw();
+        //if (!mStartParams->mDisableVideo)
+        //    mGraphics->MapTiles_Draw();
         return true;
     }
 
@@ -8211,7 +8753,7 @@ sSprite* cFodder::Sprite_Add(size_t pSpriteID, int16 pSpriteX, int16 pSpriteY) {
         break;
 
     case eSprite_Helicopter_Grenade_Enemy:          // 3 Nulls
-    case eSprite_Helicopter_Grenade2_Enemy:
+    case eSprite_Helicopter_Unarmed_Enemy:
     case eSprite_Helicopter_Missile_Enemy:
     case eSprite_Helicopter_Homing_Enemy:
     case eSprite_Helicopter_Homing_Enemy2:
@@ -8233,12 +8775,12 @@ sSprite* cFodder::Sprite_Add(size_t pSpriteID, int16 pSpriteX, int16 pSpriteY) {
         break;
 
         // Fall Through
-    case eSprite_Helicopter_Grenade2_Human:         // 2 Nulls
-    case eSprite_Helicopter_Grenade_Human:
+    case eSprite_Helicopter_Grenade_Human:         // 2 Nulls
+    case eSprite_Helicopter_Unarmed_Human:
     case eSprite_Helicopter_Missile_Human:
     case eSprite_Helicopter_Homing_Human:
-    case eSprite_Helicopter_Grenade2_Human_Called:
     case eSprite_Helicopter_Grenade_Human_Called:
+    case eSprite_Helicopter_Unarmed_Human_Called:
     case eSprite_Helicopter_Missile_Human_Called:
     case eSprite_Helicopter_Homing_Human_Called:
     case eSprite_Tank_Enemy:
@@ -8358,7 +8900,7 @@ void cFodder::Squad_Member_Rotate_Can_Fire() {
     if (mSquad_Member_Fire_CoolDown_Override)
         mSquad_Member_Fire_CoolDown_Override = false;
     else {
-        mSquad_Member_Fire_CoolDown -= 2;
+        mSquad_Member_Fire_CoolDown -= 1;
         if (mSquad_Member_Fire_CoolDown >= 0)
             return;
     }
@@ -8931,8 +9473,8 @@ loc_2DFC7:;
 
     mVideo_Draw_Columns = 0x10;
     mVideo_Draw_Rows = 0x10;
-    if (!mStartParams->mDisableVideo)
-        mGraphics->MapTiles_Draw();
+    //if (!mStartParams->mDisableVideo)
+    //    mGraphics->MapTiles_Draw();
 }
 
 void cFodder::Map_Destroy_Tiles_Next() {
@@ -9115,23 +9657,25 @@ void cFodder::Menu_Loop(const std::function<void()> pButtonHandler) {
     mGraphics->PaletteSet();
     mSurface->palette_FadeTowardNew();
 
+    mInterruptCallback = [this]() {
+
+        Mouse_DrawCursor();
+    };
+
     for (;;) {
 
-        Cycle_End();
+        Video_Sleep();
 
         if (Menu_Draw(pButtonHandler))
             break;
     }
 
+    mInterruptCallback = nullptr;
     Image_FadeOut();
     mSurface->clearBuffer();
 }
 
 bool cFodder::Menu_Draw(const std::function<void()> pButtonHandler) {
-
-    // Handle Mouse
-    Mouse_Inputs_Get();
-    Mouse_DrawCursor();
 
     // Button Pressed?
     if (mButtonPressLeft)
@@ -9144,7 +9688,6 @@ bool cFodder::Menu_Draw(const std::function<void()> pButtonHandler) {
     if (mSurface->isPaletteAdjusting())
         mSurface->palette_FadeTowardNew();
 
-    Video_SurfaceRender();
     return false;
 }
 
@@ -9159,10 +9702,7 @@ void cFodder::Demo_Quiz_ShowScreen(const char* pFilename) {
     mSurface->palette_FadeTowardNew();
 
     for (;; ) {
-        Cycle_End();
-
-        Mouse_Inputs_Get();
-        Mouse_DrawCursor();
+        Video_Sleep();
 
         if (mButtonPressLeft || mPhase_Aborted)
             break;
@@ -9170,7 +9710,6 @@ void cFodder::Demo_Quiz_ShowScreen(const char* pFilename) {
         if (mSurface->isPaletteAdjusting())
             mSurface->palette_FadeTowardNew();
 
-        Video_SurfaceRender();
     }
 
     Image_FadeOut();
@@ -9260,6 +9799,8 @@ void cFodder::Service_Show() {
     if (mParams->mSkipService)
         return;
 
+    word_82176 = 0;
+
 	mWindow->SetScreenSize(mVersionCurrent->GetScreenSize());
     mVersionPlatformSwitchDisabled = true;
 
@@ -9269,7 +9810,7 @@ void cFodder::Service_Show() {
     mGraphics->SetActiveSpriteSheet(eGFX_SERVICE);
     mGraphics->PaletteSet();
 
-    mSound->Music_Play(0);
+    Music_Play(0);
     Service_KIA_Loop();
 
     if(!mVersionCurrent->isAmigaTheOne())
@@ -9307,8 +9848,15 @@ void cFodder::Service_KIA_Loop() {
     mGraphics->PaletteSet();
     mSurface->Save();
 
+    mInterruptCallback = [this]() {
+        Service_Draw_List();
+        if (mInterruptTick % 2 == 0)
+            Service_ScrollUp_DrawList();
+    };
+
     do {
-        Mouse_Inputs_Get();
+        Video_Sleep();
+        Video_Sleep();
 
         if (mService_Promotion_Exit_Loop == -1 || mMouse_Exit_Loop) {
             mMouse_Exit_Loop = false;
@@ -9319,13 +9867,9 @@ void cFodder::Service_KIA_Loop() {
         if (mSurface->isPaletteAdjusting())
             mSurface->palette_FadeTowardNew();
 
-        Service_Draw_List();
-        Cycle_End();
-        Service_ScrollUp_DrawList();
-
-        Video_SurfaceRender();
-
     } while (mSurface->isPaletteAdjusting() || mService_ExitLoop == 0);
+
+    mInterruptCallback = nullptr;
 }
 
 void cFodder::Service_Promotion_Loop() {
@@ -9352,9 +9896,15 @@ void cFodder::Service_Promotion_Loop() {
     mGraphics->PaletteSet();
     mSurface->Save();
 
+    mInterruptCallback = [this]() {
+        Service_Draw_List();
+        if (mInterruptTick % 2 == 0)
+            Service_ScrollUp_DrawList();
+        Service_Promotion_Check();
+    };
     do {
-
-        Mouse_Inputs_Get();
+        Video_Sleep();
+        Video_Sleep();
         if (mService_Promotion_Exit_Loop == -1 || mMouse_Exit_Loop) {
             mMouse_Exit_Loop = false;
             mSurface->paletteNew_SetToBlack();
@@ -9364,15 +9914,9 @@ void cFodder::Service_Promotion_Loop() {
         if (mSurface->isPaletteAdjusting())
             mSurface->palette_FadeTowardNew();
 
-        Service_Promotion_Check();
-        Service_Draw_List();
-        Cycle_End();
-        //sub_14445();
-        Service_ScrollUp_DrawList();
-
-        Video_SurfaceRender();
-
     } while (mSurface->isPaletteAdjusting() || mService_ExitLoop == 0);
+
+    mInterruptCallback = nullptr;
 
 loc_18001:;
 
@@ -9515,11 +10059,6 @@ void cFodder::Service_ScrollUp_DrawList() {
             mService_Promotion_Exit_Loop = 0;
 
     }
-
-    //auto remove = std::remove_if(mService_Draw_List.begin(), mService_Draw_List.end(), [](auto pVal) 
-    //{ return pVal.mY < -48; });
-
-    //mService_Draw_List.erase(remove, mService_Draw_List.end());
 }
 
 void cFodder::Service_Draw_String(const std::string& pText, const uint8* pData28, int16 pData0, int16 pData8, int16 pDataC) {
@@ -9552,7 +10091,7 @@ void cFodder::Service_Draw_String(const std::string& pText, const uint8* pData28
         Data4 += 0x1A;
         goto loc_18259;
     loc_1823C:;
-        if (Data4 >= 0x5A) {
+        if (Data4 > 0x5A) {
             Data4 -= 0x61;
             Data4 += 0x39;
         }
@@ -9710,10 +10249,11 @@ void cFodder::Briefing_Show_Ready() {
     Briefing_Draw_Phase();
     Briefing_Draw_With();
 
+    mSurface->Save();
     mMouse_Exit_Loop = false;
 
     do {
-        Mouse_Inputs_Get();
+        Music_Increase_Channel_Volume();
 
         if (mPhase_Aborted) {
             mBriefing_Aborted = -1;
@@ -9721,8 +10261,7 @@ void cFodder::Briefing_Show_Ready() {
             break;
         }
 
-        Video_SurfaceRender(false);
-        Cycle_End();
+        Video_Sleep();
 
     } while (!mMouse_Exit_Loop);
 
@@ -9813,7 +10352,7 @@ void cFodder::Sprite_Frame_Modifier_Update() {
             mSprite_Frame1_Modifier ^= -2;
 
         mSprite_Frame_2 += mSprite_Frame2_Modifier;
-        if (mSprite_Frame2_Modifier == 0 || mSprite_Frame2_Modifier == 2)
+        if (mSprite_Frame_2 == 0 || mSprite_Frame_2 == 2)
             mSprite_Frame2_Modifier ^= -2;
     }
 
@@ -9966,6 +10505,7 @@ void cFodder::Sprite_Handle_Player(sSprite *pSprite) {
 
         goto loc_191C3;
 
+    // Enemy in range
     loc_1904A:;
         Data0 = tool_RandomGet() & 0x1F;
 
@@ -10108,7 +10648,7 @@ loc_1931E:;
         goto loc_19403;
 
     Sprite_Handle_Troop_Direct_TowardMouse(pSprite);
-    Sprite_Handle_Troop_FrameUnk(pSprite);
+    Sprite_Handle_Troop_Animation(pSprite);
     return;
 
 loc_19338:;
@@ -10116,7 +10656,7 @@ loc_19338:;
     mTmp_FrameNumber = pSprite->field_A;
     mSprite_Bumped_Into_SquadMember = 0;
 
-    sub_1FCF2(pSprite);
+    Sprite_Handle_Troop_Speed(pSprite);
     Data0 = pSprite->field_26;
     if (Data0 < 0)
         goto loc_1946D;
@@ -10158,7 +10698,7 @@ loc_193D6:;
 
 loc_19403:;
     pSprite->field_5A = 0;
-    sub_1FDE7(pSprite);
+    Sprite_Handle_Troop_Direct_TowardWeaponTarget_WithRestore(pSprite);
     return;
 
 loc_19414:;
@@ -10199,7 +10739,7 @@ loc_194A0:;
 
     if (!word_3AA1D) {
         mDirectionMod = 0;
-        Sprite_Handle_Troop_FrameUnk(pSprite);
+        Sprite_Handle_Troop_Animation(pSprite);
         pSprite->field_A = 0;
         return;
     }
@@ -10213,7 +10753,7 @@ loc_194A0:;
 
 loc_1957A:;
     pSprite->field_3A = 0;
-    Sprite_Handle_Troop_FrameUnk(pSprite);
+    Sprite_Handle_Troop_Animation(pSprite);
 
 }
 
@@ -10411,7 +10951,7 @@ void cFodder::Sprite_Handle_Enemy(sSprite* pSprite) {
     //loc_19A5D
     Sprite_XY_Store(pSprite);
     sub_2A3D4(pSprite);
-    sub_1FCF2(pSprite);
+    Sprite_Handle_Troop_Speed(pSprite);
 
     if (pSprite->field_45) {
         pSprite->field_45--;
@@ -10423,7 +10963,7 @@ void cFodder::Sprite_Handle_Enemy(sSprite* pSprite) {
 
 loc_19A89:;
     word_3ABB1 = 0;
-    sub_1FDE7(pSprite);
+    Sprite_Handle_Troop_Direct_TowardWeaponTarget_WithRestore(pSprite);
     goto loc_19A9C;
 
 loc_19A96:;
@@ -10431,7 +10971,7 @@ loc_19A96:;
 
 loc_19A9C:;
     pSprite->field_22 = eSprite_PersonType_AI;
-    Sprite_Handle_Troop_FrameUnk(pSprite);
+    Sprite_Handle_Troop_Animation(pSprite);
 
     if (word_3ABB1)
         return;
@@ -11065,7 +11605,7 @@ void cFodder::Sprite_Handle_Explosion(sSprite* pSprite) {
         pSprite->field_26 = 0;
     }
     //loc_1AB6F
-    int16 Data4 = 5 + (mGame_InputTicks & 3);
+    int16 Data4 = 5 + (mInterruptTick & 3);
 
     Sound_Play(pSprite, Data4, 0x1E);
     pSprite->field_8 = 0x8E;
@@ -11798,7 +12338,7 @@ void cFodder::Sprite_Handle_Enemy_Rocket(sSprite* pSprite) {
     pSprite->field_55 = 0;
     pSprite->field_A = 0;
 
-    sub_1FDE7(pSprite);
+    Sprite_Handle_Troop_Direct_TowardWeaponTarget_WithRestore(pSprite);
     pSprite->field_A = 2;
 }
 
@@ -11952,7 +12492,7 @@ void cFodder::Sprite_Handle_Flashing_Light(sSprite* pSprite) {
     pSprite->field_20 += 0x18;
 }
 
-void cFodder::Sprite_Handle_Helicopter_Grenade2_Enemy(sSprite* pSprite) {
+void cFodder::Sprite_Handle_Helicopter_Unarmed_Enemy(sSprite* pSprite) {
 
     pSprite->field_6F = eVehicle_Helicopter;
     Sprite_Handle_Helicopter_Enemy(pSprite);
@@ -12210,13 +12750,13 @@ void cFodder::Sprite_Handle_FireTrail(sSprite* pSprite) {
     Sprite_Destroy_Wrapper(pSprite);
 }
 
-void cFodder::Sprite_Handle_Helicopter_Grenade_Human(sSprite* pSprite) {
+void cFodder::Sprite_Handle_Helicopter_Unarmed_Human(sSprite* pSprite) {
 
     pSprite->field_6F = eVehicle_Helicopter;
     Sprite_Handle_Helicopter_Human(pSprite);
 }
 
-void cFodder::Sprite_Handle_Helicopter_Grenade2_Human(sSprite* pSprite) {
+void cFodder::Sprite_Handle_Helicopter_Grenade_Human(sSprite* pSprite) {
 
     pSprite->field_6F = eVehicle_Helicopter_Grenade;
     Sprite_Handle_Helicopter_Human(pSprite);
@@ -13643,15 +14183,15 @@ void cFodder::Sprite_Handle_BuildingDoor_Reinforced(sSprite* pSprite) {
     Sprite_Handle_BuildingDoor3(pSprite);
 }
 
-void cFodder::Sprite_Handle_Helicopter_Grenade2_Human_Called(sSprite* pSprite) {
-    Sprite_Handle_Helicopter_Human_CallCheck(pSprite);
-    Sprite_Handle_Helicopter_Grenade2_Human(pSprite);
-
-}
-
 void cFodder::Sprite_Handle_Helicopter_Grenade_Human_Called(sSprite* pSprite) {
     Sprite_Handle_Helicopter_Human_CallCheck(pSprite);
     Sprite_Handle_Helicopter_Grenade_Human(pSprite);
+
+}
+
+void cFodder::Sprite_Handle_Helicopter_Unarmed_Human_Called(sSprite* pSprite) {
+    Sprite_Handle_Helicopter_Human_CallCheck(pSprite);
+    Sprite_Handle_Helicopter_Unarmed_Human(pSprite);
 }
 
 void cFodder::Sprite_Handle_Helicopter_Missile_Human_Called(sSprite* pSprite) {
@@ -14122,7 +14662,7 @@ loc_1E3D2:;
         if (pSprite->field_59)
             pSprite->field_8 = Data28[(Data8 + 0x10) / 2];
 
-        // FIX: Added as only 2 frames exist for all sprites in mSprite_AnimationPtrs
+        // FIX: Added as only 2 frames exist for -most- sprites in mSprite_AnimationPtrs
         pSprite->field_A %= 2;
     }
     //loc_1E50A
@@ -14881,7 +15421,7 @@ void cFodder::Sprite_Handle_Troop_Direct_TowardWeaponTarget(sSprite* pSprite) {
 
     Sprite_Direction_Between_Points(pSprite, Data0, Data4);
     Sprite_Set_Direction_To_Next(pSprite);
-    Sprite_Handle_Troop_FrameUnk(pSprite);
+    Sprite_Handle_Troop_Animation(pSprite);
 }
 
 void cFodder::Sprite_Handle_Troop_Direct_TowardMouse(sSprite* pSprite) {
@@ -14896,11 +15436,27 @@ void cFodder::Sprite_Handle_Troop_Direct_TowardMouse(sSprite* pSprite) {
     Sprite_Direction_Between_Points(pSprite, Data0, Data4);
     Sprite_Set_Direction_To_Next(pSprite);
 
+    int StoredAnim = pSprite->field_8;
     mStoredSpriteFrame = pSprite->field_A;
-    Sprite_Handle_Troop_FrameUnk(pSprite);
+    Sprite_Handle_Troop_Animation(pSprite);
 
     if (!pSprite->field_43)
         return;
+
+    // FIX: This isn't original. and was added due to a case where the animation is changed
+    //      in Sprite_Handle_Troop_Animation, but the frame is pointing to a frame not
+    //      available in the new animation (issue 64)
+    if ((pSprite->field_8 >= 0x10 && pSprite->field_8 < 0x18) ||
+        (pSprite->field_8 >= 0x20 && pSprite->field_8 < 0x28)) {
+        if(mStoredSpriteFrame >= 1)
+            mStoredSpriteFrame = 0;
+    }
+
+    if ((pSprite->field_8 >= 0x18 && pSprite->field_8 < 0x20) ||
+        (pSprite->field_8 >= 0x28 && pSprite->field_8 < 0x30)) {
+        if (mStoredSpriteFrame >= 2)
+            mStoredSpriteFrame = 0;
+    }
 
     pSprite->field_A = mStoredSpriteFrame;
 }
@@ -14923,7 +15479,7 @@ void cFodder::Sprite_XY_Restore(sSprite* pSprite) {
 }
 
 void cFodder::Sprite_Handle_Player_Adjust_Movement_Speed(sSprite* pSprite) {
-    sub_1FCF2(pSprite);
+    Sprite_Handle_Troop_Speed(pSprite);
 
     if (pSprite->field_4F)
         return;
@@ -14973,7 +15529,7 @@ void cFodder::Sprite_Draw_Row_Update(sSprite* pSprite) {
         goto loc_1F753;
 
     // Leaving water for the edge/bank
-    if (pSprite->field_60 == eTerrainFeature_WaterEdge)
+    if (pSprite->field_60 != eTerrainFeature_WaterEdge)
         goto loc_1F75D;
 
     pSprite->field_52 = 5;
@@ -14986,12 +15542,11 @@ loc_1F75D:;
     Sprite_Handle_Player_Close_To_SquadMember(pSprite);
 }
 
-void cFodder::Sprite_Handle_Troop_FrameUnk(sSprite* pSprite) {
+void cFodder::Sprite_Handle_Troop_Animation(sSprite* pSprite) {
     int16 Data0, Data8;
     sSprite* Dataa30 = 0;
     sMapTarget* Data30 = 0;
     const int16* Data28 = 0;
-    sMission_Troop* Data24 = 0;
 
     // Is Human
     if (pSprite->field_22 == eSprite_PersonType_Human)
@@ -15057,27 +15612,20 @@ loc_1F7FF:;
         //seg005:020C
         if (Dataa30 != pSprite) {
 
-            Data0 = Dataa30->field_0;
-
-            if (Data0 != Dataa30->field_26)
+            if (Dataa30->field_0 != Dataa30->field_26)
                 goto loc_1F9C0;
-
-            Data0 = Dataa30->field_4;
-            if (Data0 != Dataa30->field_28)
+            if (Dataa30->field_4 != Dataa30->field_28)
                 goto loc_1F9C0;
 
             if (!word_3B2F3)
                 goto loc_1F9C0;
         }
         else {
-
-            Data0 = pSprite->field_0;
-            if (Data0 != pSprite->field_26)
+            if (pSprite->field_0 != pSprite->field_26)
                 goto loc_1F9C0;
 
             //seg005:0246
-            Data0 = pSprite->field_4;
-            if (Data0 != pSprite->field_28)
+            if (pSprite->field_4 != pSprite->field_28)
                 goto loc_1F9C0;
         }
     }
@@ -15092,138 +15640,114 @@ loc_1F7FF:;
     return;
 
 loc_1F9C0:;
-    if (pSprite->field_54 != 2)
-        goto loc_1FA39;
+    // Fired Bullet
+    if (pSprite->field_54 == 2) {
 
-    if (word_3AA1D) {
-        if (word_3AA1D == 2) {
-            pSprite->field_8 = *(Data28 + Data8);
-            pSprite->field_A = mSprite_Frame_3;
-            // FIX: Added as only 2 frames exist for all sprites in mSprite_AnimationPtrs
-            pSprite->field_A %= 2;
+        if (word_3AA1D) {
+            if (word_3AA1D == 2) {
+                pSprite->field_8 = *(Data28 + Data8);
+                pSprite->field_A = mSprite_Frame_3 % 3;
+            }
+            else {
+                //loc_1F9FF
+                pSprite->field_8 = *(Data28 + Data8);
+                pSprite->field_A = 0;
+            }
         }
-        else {
-            //loc_1F9FF
-            pSprite->field_8 = *(Data28 + Data8);
-            pSprite->field_A = 0;
-        }
-    }
-    //loc_1FA20
-    --pSprite->field_57;
-    if (pSprite->field_57)
-        return;
+        //loc_1FA20
+        --pSprite->field_57;
+        if (pSprite->field_57)
+            return;
 
-    pSprite->field_54 = 0;
-    goto loc_1FB00;
-
-loc_1FA39:;
-    if (pSprite->field_54 != 1)
+        pSprite->field_54 = 0;
         goto loc_1FB00;
-
-    Data0 = *(Data28 + Data8 + 0x28);
-
-    if (Data0 != pSprite->field_8) {
-        pSprite->field_8 = *(Data28 + Data8 + 0x28);
-        pSprite->field_55 = 0;
-        pSprite->field_A = 0;
-        return;
     }
-    //loc_1FA93
-    pSprite->field_55++;
-    if (pSprite->field_55 != 2)
-        return;
-    pSprite->field_55 = 0;
-    pSprite->field_A++;
-    mStoredSpriteFrame = pSprite->field_A;
 
-    if (pSprite->field_A < 3)
-        return;
-    mStoredSpriteFrame = 0;
-    pSprite->field_A = 0;
-    pSprite->field_54 = 0;
-    pSprite->field_5A = 0;
-    pSprite->field_55 = 0;
+    // loc_1FA39: Chucked Grenade
+    if (pSprite->field_54 == 1) {
+        Data0 = *(Data28 + Data8 + 0x28);
+
+        if (Data0 != pSprite->field_8) {
+            pSprite->field_8 = Data0;
+            pSprite->field_55 = 0;
+            pSprite->field_A = 0;
+            return;
+        }
+        //loc_1FA93
+        pSprite->field_55++;
+        if (pSprite->field_55 != 2)
+            return;
+        pSprite->field_55 = 0;
+        pSprite->field_A++;
+        mStoredSpriteFrame = pSprite->field_A;
+
+        if (pSprite->field_A < 3)
+            return;
+
+        mStoredSpriteFrame = 0;
+        pSprite->field_A = 0;
+        pSprite->field_54 = 0;
+        pSprite->field_5A = 0;
+        pSprite->field_55 = 0;
+    }
 
 loc_1FB00:;
-    if (pSprite->field_54 != 3)
-        goto loc_1FBA4;
+    // Fired Rocket
+    if (pSprite->field_54 == 3) {
 
-    Data0 = *(Data28 + Data8 + 0x38);
-    if (Data0 != pSprite->field_8) {
-        pSprite->field_8 = Data0;
+        Data0 = *(Data28 + Data8 + 0x38);
+        if (Data0 != pSprite->field_8) {
+            pSprite->field_8 = Data0;
+            pSprite->field_55 = 0;
+            pSprite->field_A = 0;
+            return;
+        }
+        //loc_1FB5A
+        pSprite->field_55++;
+        if (pSprite->field_55 != 7)
+            return;
+
         pSprite->field_55 = 0;
         pSprite->field_A = 0;
-        return;
+        pSprite->field_54 = 0;
+        pSprite->field_5A = 0;
+        pSprite->field_55 = 0;
     }
-    //loc_1FB5A
-    pSprite->field_55++;
-    if (pSprite->field_55 != 7)
-        return;
 
-    pSprite->field_55 = 0;
-    pSprite->field_A = 0;
-    pSprite->field_54 = 0;
-    pSprite->field_5A = 0;
-    pSprite->field_55 = 0;
-
-loc_1FBA4:;
-    // If in water
+    // loc_1FBA4: If in water
     if (pSprite->field_4F) {
-
         pSprite->field_8 = *(Data28 + Data8 + 0x20);
-        Data0 = mSprite_Frame_1;
-
         // Reached another troop?
-        if (pSprite->field_43)
-            Data0 = mSprite_Frame_2;
-
-        Data0 &= 1;
-        pSprite->field_A = Data0;
-        goto loc_1FCD7;
+        pSprite->field_A = (pSprite->field_43) ? mSprite_Frame_2 : mSprite_Frame_1;
+        pSprite->field_A &= 1;
     }
-    //loc_1FBF8
-    if (!word_3AA1D) {
+    else if (!word_3AA1D) {
+        //loc_1FBF8
         pSprite->field_8 = *(Data28 + Data8 + 0x18);
         pSprite->field_A = mSprite_Frame_2;
-        goto loc_1FCD7;
     }
-    //loc_1FC29
-    if (pSprite->field_8 == *(Data28 + Data8 + 0x18) && pSprite->field_A) {
+    else if (pSprite->field_8 == *(Data28 + Data8 + 0x18) && pSprite->field_A) {
+        //loc_1FC29
         pSprite->field_A = 0;
-        goto loc_1FCD7;
+    }
+    else {
+        //loc_1FC61
+        Data0 = (pSprite->field_46_mission_troop) ? 
+                 pSprite->field_46_mission_troop->field_6 : 0x70;
+
+        pSprite->field_8 = (Data0 == 3) ? *(Data28 + Data8 + 0) : *(Data28 + Data8);
+        pSprite->field_A = (Data0 != 2) ? mSprite_Frame_1 : mSprite_Frame_3;
     }
 
-    //loc_1FC61
-    Data24 = pSprite->field_46_mission_troop;
-
-    if (Data24 == 0)
-        Data0 = 0x70;
-    else
-        Data0 = Data24->field_6;
-
-    if (Data0 == 3)
-        pSprite->field_8 = *(Data28 + Data8 + 0);
-    else
-        pSprite->field_8 = *(Data28 + Data8);
-
-    //loc_1FCB4
-    if (Data0 != 2)
-        pSprite->field_A = mSprite_Frame_1;
-    else
-        pSprite->field_A = mSprite_Frame_3;
-
-loc_1FCD7:;
-    // Bumped into other troop
-    if (!mSprite_Bumped_Into_SquadMember)
-        return;
-
-    // FIX: Added % as only 2 frames exist for all sprites in mSprite_AnimationPtrs
-    // There is one case where mTmp_FrameNumber isnt set by the current sprite
-    pSprite->field_A = mTmp_FrameNumber % 2;
-    mSprite_Bumped_Into_SquadMember = 0;
+    if (mSprite_Bumped_Into_SquadMember) {
+        // FIX: Added % as only 2 frames exist for -most- sprites in mSprite_AnimationPtrs
+        // There is also one case where mTmp_FrameNumber isnt set by the current sprite
+        pSprite->field_A = mTmp_FrameNumber % 2;
+        mSprite_Bumped_Into_SquadMember = 0;
+    }
 }
 
-void cFodder::sub_1FCF2(sSprite* pSprite) {
+void cFodder::Sprite_Handle_Troop_Speed(sSprite* pSprite) {
     int16 Data0;
 
     pSprite->field_36 = 0x10;
@@ -15273,7 +15797,7 @@ loc_1FDDC:;
     pSprite->field_36 = 6;
 }
 
-void cFodder::sub_1FDE7(sSprite* pSprite) {
+void cFodder::Sprite_Handle_Troop_Direct_TowardWeaponTarget_WithRestore(sSprite* pSprite) {
 
     int16 Data0 = pSprite->field_2E;
     int16 Data4 = pSprite->field_30;
@@ -15283,7 +15807,7 @@ void cFodder::sub_1FDE7(sSprite* pSprite) {
 
     mStoredSpriteFrame = pSprite->field_A;
 
-    Sprite_Handle_Troop_FrameUnk(pSprite);
+    Sprite_Handle_Troop_Animation(pSprite);
     if (!pSprite->field_43)
         return;
 
@@ -15541,7 +16065,7 @@ loc_202E5:;
     pSprite->field_10 = 0x80;
 loc_20307:;
 
-    Data0 = mGame_InputTicks;
+    Data0 = mInterruptTick;
     Data0 >>= 2;
     Data0 &= 0x3F;
     Data0 -= 0x20;
@@ -15549,7 +16073,7 @@ loc_20307:;
     pSprite->field_10 += Data0;
     pSprite->field_4 = mStoredSpriteY;
 
-    Data0 = mGame_InputTicks;
+    Data0 = mInterruptTick;
     Data0 &= 0x1F;
     Data0 += 0x0C;
     pSprite->field_44 = (int8)Data0;
@@ -16041,17 +16565,23 @@ void cFodder::Intro_OpenFodder() {
 		if (CF2)
 			VersionSwitch(mVersions->GetForCampaign("Cannon Fodder 2", mParams->mDefaultPlatform));
 
+        Mouse_Setup();
+
 		// Random intro
 		auto Tileset = static_cast<eTileTypes>(((uint8)tool_RandomGet()) % eTileTypes_Hid);
 		Mission_Intro_Play(true, Tileset);
 		mOpenFodder_Intro_Done = true;
 		if (CF2)
 			VersionSwitch(mVersions->GetForCampaign("Cannon Fodder", mParams->mDefaultPlatform));
+
+        while (Music_Decrease_Channel_Volume()) {
+            sleepLoop(1);
+        }
 	}
 }
 
 void cFodder::intro_LegionMessage() {
-    int16 Duration = 325 / 4;
+    int16 Duration = 150;
     bool DoBreak = false;
 
     mSurface->clearBuffer();
@@ -16060,26 +16590,33 @@ void cFodder::intro_LegionMessage() {
     Intro_Print_String(&mVersionCurrent->getIntroData()->at(0).mText[0]);
 	Intro_Print_String(&mVersionCurrent->getIntroData()->at(0).mText[1]);
 	Intro_Print_String(&mVersionCurrent->getIntroData()->at(0).mText[2]);
+    mSurface->Save();
 
     while (mSurface->isPaletteAdjusting() || DoBreak == false) {
 
-        Mouse_Inputs_Get();
-
-       if (mSurface->isPaletteAdjusting())
+        if (mSurface->isPaletteAdjusting()) {
             mSurface->palette_FadeTowardNew();
 
-        if (Duration > 1)
+            if (!DoBreak) {
+                Video_Sleep();
+                Video_Sleep();
+                Video_Sleep();
+                continue;
+            }
+        }
+
+        if (Duration >= 0)
             --Duration;
         else {
             if (DoBreak == false) {
                 mSurface->paletteNew_SetToBlack();
+
                 Duration = 0;
                 DoBreak = true;
             }
         }
 
-        Video_SurfaceRender(false);
-        Cycle_End();
+        Video_Sleep();
     }
 }
 
@@ -16090,7 +16627,7 @@ int16 cFodder::intro_Play() {
 
     for (word_3B2CF = 1; mVersionCurrent->getIntroData()->at(word_3B2CF).mImageNumber != 0; ++word_3B2CF) {
 
-        mIntro_PlayTextDuration = 0x288 / 5;
+        mIntro_PlayTextDuration = 0x12C;
 
         mSurface->palette_SetToBlack();
 
@@ -16105,7 +16642,7 @@ int16 cFodder::intro_Play() {
             mGraphics->Load_And_Draw_Image(ImageName.str(), 0xD0);
         }
         else {
-            mIntro_PlayTextDuration = 0xAF / 2;
+            mIntro_PlayTextDuration = 0x96;
             mSurface->clearBuffer();
         }
 
@@ -16123,13 +16660,22 @@ int16 cFodder::intro_Play() {
         int16 Duration = mIntro_PlayTextDuration;
         bool DoBreak = false;
 
+        mSurface->Save();
+
         while (mSurface->isPaletteAdjusting() || DoBreak == false) {
-            --Duration;
+
+            if (mSurface->isPaletteAdjusting()) {
+                mSurface->palette_FadeTowardNew();
+                if (!DoBreak) {
+                    Video_Sleep();
+                    Video_Sleep();
+                    Video_Sleep();
+                    continue;
+                }
+            }
 
             if (Duration) {
-                mSurface->palette_FadeTowardNew();
-
-                Mouse_Inputs_Get();
+                --Duration;
                 if (mMouseButtonStatus) {
 
                     if (mVersionCurrent->getIntroData()->size() >= 2)
@@ -16141,12 +16687,13 @@ int16 cFodder::intro_Play() {
                 }
             }
             else {
-                mSurface->paletteNew_SetToBlack();
-                DoBreak = true;
+                if (DoBreak == false) {
+                    mSurface->paletteNew_SetToBlack();
+                    DoBreak = true;
+                }
             }
 
-            Video_SurfaceRender(false);
-            Cycle_End();
+            Video_Sleep();
         }
 
 
@@ -16176,10 +16723,10 @@ void cFodder::Mission_Intro_Play(const bool pShowHelicopter, eTileTypes pTileset
     mGraphics->SetActiveSpriteSheet(eGFX_BRIEFING);
 
     mMouse_Exit_Loop = false;
-    mSound->Music_Play(0x07);
+    Music_Play(0x07);
     Mission_Intro_Helicopter_Start();
 
-    Mission_Intro_Draw_Mission_Name();
+    //Mission_Intro_Draw_Mission_Name();
     mSurface->Save();
 
 	// Prior to mission 4, the UFO is not shown on the mission intro
@@ -16187,10 +16734,11 @@ void cFodder::Mission_Intro_Play(const bool pShowHelicopter, eTileTypes pTileset
     if (mVersionCurrent->isCannonFodder2() && mGame_Data.mMission_Number < 4 && !pShowHelicopter)
         ShowHelicopter = false;
 
-	
+    mWindow->ToggleVSync(true);
     mVersionPlatformSwitchDisabled = true;
-    mGraphics->Mission_Intro_Play(ShowHelicopter, pTileset);
+    mGraphics->Mission_Intro_Play(ShowHelicopter, pTileset, Briefing_Get_Mission_Title(), Briefing_Get_Phase_Name());
     mVersionPlatformSwitchDisabled = false;
+    mWindow->ToggleVSync(false);
 }
 
 void cFodder::Intro_Print_String(const sIntroString* pString) {
@@ -16207,10 +16755,10 @@ void cFodder::Image_FadeIn() {
     mGame_Data.mDemoRecorded.DisableTicks();
     while (mSurface->isPaletteAdjusting()) {
         mSurface->palette_FadeTowardNew();
-        Mouse_Inputs_Get();
 
-        Video_SurfaceRender();
-        Cycle_End();
+        Video_Sleep();
+        Video_Sleep();
+        Video_Sleep();
     }
 
     mGame_Data.mDemoRecorded.EnableTicks();
@@ -16226,17 +16774,9 @@ void cFodder::Image_FadeOut() {
     mGame_Data.mDemoRecorded.DisableTicks();
     while (mSurface->isPaletteAdjusting()) {
 
-        Mouse_Inputs_Get();
-        //Mouse_DrawCursor();
+        mSurface->palette_FadeTowardNew();
 
-        // BUGFIX: Prevent a pallete bug when version switching
-        if (mRecruit_Screen_Active) {
-            Recruit_Cycle();
-        } else 
-            mSurface->palette_FadeTowardNew();
-
-        Video_SurfaceRender();
-        Cycle_End();
+        Video_Sleep();
 
     }
     mGame_Data.mDemoRecorded.EnableTicks();
@@ -16250,11 +16790,12 @@ void cFodder::SetActiveSpriteSheetPtr(const sSpriteSheet** pSpriteSheet) {
 
 void cFodder::intro_Retail() {
 
-    // Disabled: GOG CD Version doesn't require a manual check
+    // Disabled: GOG CD Version doesn't require the game manual check
     CopyProtection();
     mGraphics->Load_Sprite_Font();
 
-	mSound->Music_Play(CANNON_BASED(16, 20));
+	Music_Play(CANNON_BASED(16, 20));
+    Music_SetFullVolume();
 
     if (mVersionCurrent->isCannonFodder1())
         intro_LegionMessage();
@@ -16264,19 +16805,25 @@ void cFodder::intro_Retail() {
 
     mPhase_Aborted = false;
 
-    if (ShowImage_ForDuration("cftitle", CANNON_BASED(0x1F8 / 3, 0x280 / 3)))
+    if (ShowImage_ForDuration("cftitle", CANNON_BASED(0x177, 0x280)))
         return;
 
-    if (intro_Play())
+    if (intro_Play()) {
+
+        while (Music_Decrease_Channel_Volume()) {
+            sleepLoop(1);
+        }
+
+        return;
+    }
+
+    if (ShowImage_ForDuration("virgpres", 0x15E))
         return;
 
-    if (ShowImage_ForDuration("virgpres", 0x2D0 / 3))
+    if (ShowImage_ForDuration("sensprod", 0x15E))
         return;
 
-    if (ShowImage_ForDuration("sensprod", 0x2D0 / 3))
-        return;
-
-    if (ShowImage_ForDuration("cftitle", 0x318 / 3))
+    if (ShowImage_ForDuration("cftitle", 0x258))
         return;
 }
 
@@ -16303,14 +16850,21 @@ int16 cFodder::ShowImage_ForDuration(const std::string& pFilename, uint16 pDurat
 
     mGraphics->Load_And_Draw_Image(pFilename, 0x100, pBackColor);
     mGraphics->PaletteSet();
+    mSurface->Save();
 
     while (mSurface->isPaletteAdjusting() || DoBreak == false) {
-        Mouse_Inputs_Get();
         --pDuration;
 
         if (pDuration) {
-           if (mSurface->isPaletteAdjusting())
+            if (mSurface->isPaletteAdjusting()) {
                 mSurface->palette_FadeTowardNew();
+                if (!DoBreak) {
+                    Video_Sleep();
+                    Video_Sleep();
+                    Video_Sleep();
+                    continue;
+                }
+            }
 
             if (pCanAbort && (mMouseButtonStatus || mPhase_Aborted)) {
                 mPhase_Aborted = false;
@@ -16320,44 +16874,38 @@ int16 cFodder::ShowImage_ForDuration(const std::string& pFilename, uint16 pDurat
             }
         }
         else {
-            mSurface->paletteNew_SetToBlack();
-            DoBreak = true;
+            if (DoBreak == false) {
+                mSurface->paletteNew_SetToBlack();
+                DoBreak = true;
+            }
         }
 
-        Video_SurfaceRender(false);
-        Cycle_End();
+        Video_Sleep();
     }
 
     return mImage_Aborted;
 }
 
-void cFodder::Video_SurfaceRender(const bool pRestoreSurface) {
+void cFodder::Video_SurfaceRender(const bool pRestoreSurface, const bool pShrink, cSurface* pSurface, const bool pSkip) {
 
     if (mStartParams->mDisableVideo)
         return;
 
-    mSurface->draw();
-    mWindow->RenderAt(mSurface);
+    if (!pSurface) {
+        pSurface = mSurface;
+    }
+       
+    pSurface->draw(pSkip == true ? 16 : 0, pSkip == true ? 16 : 0);
+    if (pShrink) {
+        mWindow->RenderShrunk(pSurface);
+    }
+    else {
+        mWindow->RenderAt(pSurface);
+    }
     mWindow->FrameEnd();
 
-    if(pRestoreSurface)
-        mSurface->Restore();
-}
-
-void cFodder::Cycle_End() {
-#ifndef _OFED
-    if (mParams->mSleepDelta) {
-        mTicksDiff = SDL_GetTicks() - mTicksDiff;
-        mTicks = mTicksDiff * 40 / 1000;
-        sleepLoop(mParams->mSleepDelta * 1000 / 40 - mTicksDiff);
-        mTicksDiff = SDL_GetTicks();
-    }
-#endif
-
-    // New Cycle begins
-       
-    mWindow->Cycle();
-    eventsProcess();
+    //if(pRestoreSurface)
+    //    mSurfaceFinal->Restore();
 }
 
 void cFodder::sleepLoop(int64 pMilliseconds) {
@@ -16393,15 +16941,18 @@ void cFodder::WonGame() {
        // mGraphics->Load_And_Draw_Image("PRETENTIOUS2", 0x100);
         mGraphics->Load_And_Draw_Image("PRETENTIOUS3", 0x100);
     } else {
-        mSound->Music_Play(17);
+        Music_Play(17);
         mGraphics->Load_And_Draw_Image("WON", 0x100);
     }
 
     Image_FadeIn();
+    mMouse_Exit_Loop = false;
 
-    for (int count = 500; count >= 0; --count) {
-        Video_SurfaceRender();
-        Cycle_End();
+    for (int count = 10000; count >= 0; --count) {
+        Video_Sleep();
+
+        if (mPhase_Aborted || mMouse_Exit_Loop)
+            break;
     }
 
     Image_FadeOut();
@@ -17363,7 +17914,7 @@ int16 cFodder::Sprite_Create_Building_Explosion(sSprite* pData2C, int16& pX, int
     pData2C->field_4 = pY;
     pData2C->field_4 += 0x10;
 
-    int16 Data4 = mGame_InputTicks;
+    int16 Data4 = mInterruptTick;
     Data4 &= 3;
     Data4 += 5;
 
@@ -17645,10 +18196,10 @@ void cFodder::sub_21CD1(sSprite* pSprite) {
     Data8 *= 0x76;
     Data8 &= 0x1FE;
 
-    DataC = mMap_Direction_Calculations[Data8 / 2];
+    DataC = mDirectionVectorTable[Data8 / 2];
     Data8 += 0x80;
     Data8 &= 0x1FE;
-    Data10 = mMap_Direction_Calculations[Data8 / 2];
+    Data10 = mDirectionVectorTable[Data8 / 2];
 
     //seg005:29B2
     DataC >>= 8;
@@ -18159,8 +18710,7 @@ void cFodder::Playground() {
         //Mouse_Inputs_Get();
         //Mouse_DrawCursor();
 
-       Video_SurfaceRender();
-       Cycle_End();
+       Video_Sleep();
 
         // Q
         if (mKeyCode == 0x14) {
@@ -18248,16 +18798,15 @@ void cFodder::About() {
     cAbout About;
     while (About.Cycle()) {
 
-
-        mWindow->RenderAt(mSurface);
-        mWindow->FrameEnd();
-        Cycle_End();
+        
     }
 
     g_Fodder->mPhase_Aborted = false;
 }
 
 void cFodder::CreateRandom(sMapParams pParams) {
+    mSurface->clearBuffer();
+
 	mGame_Data.mCampaign.CreateCustomCampaign();
 	mGame_Data.mCampaign.setRandom(true);
 	mGame_Data.mCampaign.setName("Random");
@@ -18327,8 +18876,9 @@ void cFodder::Start() {
 	mSound = 0;
     mVersionDefault = 0;
     mVersionCurrent = 0;
-    VersionSwitch(mVersions->GetRetail( mParams->mDefaultPlatform, mParams->mDefaultGame ));
 
+    VersionSwitch(mVersions->GetRetail( mParams->mDefaultPlatform, mParams->mDefaultGame ));
+    
     if (!mVersionCurrent) {
         VersionSwitch(mVersions->GetDemo());
 
@@ -18341,7 +18891,7 @@ void cFodder::Start() {
         mGame_Data.mDemoRecorded.mRecordedPlatform = mVersionCurrent->mPlatform;
 
     mGame_Data.mDemoRecorded.save();
-
+    
     // Play the intro
 	Intro_OpenFodder();
 
@@ -18415,14 +18965,18 @@ bool cFodder::GameOverCheck() {
 			// Demo / Custom Mission restart
 			if (mVersionCurrent->isDemo() && mCustom_Mode != eCustomMode_Set && !mVersionCurrent->isAmigaTheOne())
 				return false;
-
+            
 			// Reached last map in this mission set?
-			if (!mGame_Data.Phase_Next()) {
+			if (!mGame_Data.Phase_Next() && !mVersionDefault->isRandom() && mCustom_Mode != eCustomMode_Map) {
 
 				mGame_Data.mGameWon = true;
 				WonGame();
 				return true;
 			}
+
+            if (mVersionDefault->isRandom()) {
+                mGame_Data.mMission_Recruitment = -1;
+            }
 		}
 	}
 
@@ -18452,7 +19006,6 @@ int16 cFodder::Briefing_Show() {
 
 		Map_Load();
 		Map_Load_Sprites();
-		Map_Overview_Prepare();
 
 		// Prepare Squads
 		Phase_Soldiers_Count();
@@ -18478,7 +19031,7 @@ int16 cFodder::Briefing_Show() {
 			mPhase_Aborted = true;
 
 			if (!mStartParams->mDisableSound)
-				mSound->Music_Play(0);
+				Music_Play(0);
 
 			return 0;
 		}
@@ -18503,24 +19056,43 @@ int16 cFodder::Mission_Loop() {
 
 		intro_main();
 
-        // Prepare a new game?
-        if (mGame_Data.mMission_Recruitment && !mParams->mSkipRecruit) {
-            mGame_Data.mMission_Recruitment = 0;
+        // Single / Random Map mode
+        if (mCustom_Mode == eCustomMode_Map) {
+            if (mVersionDefault->mName == "Random Map") {
+                sMapParams Params(mRandom.get());
+                CreateRandom(Params);
+                mGame_Data.mMission_Recruitment = 0;
+            }
+            else {
+                Custom_ShowMapSelection();
+            }
 
-            switch (Recruit_Show()) {
-            case 0:     // Start Mission
-                break;
-
-            case -1:    // Return to version select
+            if (mCustom_Mode == eCustomMode_None)
                 return -1;
+        }
+        else {
+            // Prepare a new game?
+            if (mGame_Data.mMission_Recruitment && !mParams->mSkipRecruit) {
+                mGame_Data.mMission_Recruitment = 0;
 
-            case -2:    // Custom set mode
-                return -2;
+                switch (Recruit_Show()) {
+                case 0:     // Start Mission
+                    break;
 
-            case -3:    // Load/Save pressed
-                continue;
+                case -1:    // Return to version select
+                    return -1;
+
+                case -2:    // Custom set mode
+                    return -2;
+
+                case -3:    // Load/Save pressed
+                    continue;
+                }
             }
         }
+
+
+        mMusic_SlowVolumeDecrease = true;
 
         WindowTitleSet(true);
 
@@ -18536,7 +19108,17 @@ int16 cFodder::Mission_Loop() {
 				break;
 		}
 
+        while (Music_Decrease_Channel_Volume()) {
+            sleepLoop(1);
+        }
+
+        if (mStartParams->mDemoPlayback || mStartParams->mDemoRecord) {
+            std::lock_guard<std::mutex> lock(g_Fodder->mSurfaceMtx);
+            mVideo_Done = true;
+        }
+
 		Phase_Prepare();
+        mMusic_SlowVolumeDecrease = false;
 
         if (!Phase_Loop()) {
             mKeyCode = 0;
@@ -18629,7 +19211,6 @@ void cFodder::intro_main() {
 }
 
 void cFodder::MapTiles_Draw() {
-
     mMapTile_ColumnOffset = 0;
     mMapTile_RowOffset = 0;
 
@@ -18646,8 +19227,8 @@ void cFodder::MapTiles_Draw() {
     mMapTile_Column_CurrentScreen = 0;
     mMapTile_Row_CurrentScreen = 0;
 
-    if (!mStartParams->mDisableVideo)
-        mGraphics->MapTiles_Draw();
+    //if (!mStartParams->mDisableVideo)
+    //    mGraphics->MapTiles_Draw();
 }
 
 void cFodder::Exit(unsigned int pExitCode) {
